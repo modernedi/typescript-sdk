@@ -3,12 +3,12 @@
   "repository": "modernedi/typescript-sdk",
   "package": "@modernedi/sdk",
   "version": "0.8.1",
-  "sourceRevision": "6dc1d53c8facca28728ccfc547aa4d1b8d64c567",
+  "sourceRevision": "3fa0b8e00245cb47a32578a9711b4a06e1038641",
   "verification": {
     "version": 1,
     "scope": "typescript-sdk",
-    "revision": "6dc1d53c8facca28728ccfc547aa4d1b8d64c567",
-    "verifiedAt": "2026-09-18T06:39:03.503Z",
+    "revision": "3fa0b8e00245cb47a32578a9711b4a06e1038641",
+    "verifiedAt": "2026-09-18T06:55:16.811Z",
     "commands": [
       "SDK publication contracts",
       "TypeScript SDK contract and package"
@@ -17,7 +17,7 @@
   "files": {
     ".gitattributes": "d60f352d0db1404c70afb4bb8b2ca3fd1c610572aa40720e8a0b7baa7885418c",
     ".github/workflows/ci.yml": "11b5926c6b7ff0f8950dc5e397848b1749189f771c2e13426d96770d25cd0b0c",
-    ".github/workflows/publish.yml": "48495643c7485cbec5ae7f7b5d2e075e025b15fc6d308c339006e8eb28eb5a06",
+    ".github/workflows/publish.yml": "dba8ad9c263b02f2643d11e3831763f1669c3cdfd0f3e02401e9c7ec870b54ed",
     ".gitignore": "3087facec39632340883ca6d8dc3e15cb8dc14c85b220244dc6c3ae71e3f3284",
     "examples/configuration-apply.ts": "48e80e4077ae05926ca5f53b9853266e07f0a9b442f54ec933aa7ad752181a5e",
     "examples/configuration-plan.ts": "835d9007f7b37f317f30fec5e5b78bcd3d73734d99bfecf1458d3450f715ea63",
