@@ -518,5 +518,7 @@ and regenerated. The public source is exported as a reviewed snapshot, without
 private application code, generators, deployment credentials, or Git history.
 PUBLIC_SOURCE.json records the source revision and exported file hashes.
 
-Publishing npm packages is a separate, protected maintainer operation. The CI
-workflow in this repository only builds, tests, and checks package contents.
+Publishing is a separate, manually dispatched maintainer workflow protected by
+the npm-production environment. Normal CI never publishes. A release requires an
+exact reviewed commit, version, and recent upstream verification, then verifies
+the installed tarball and registry integrity. See the workflow in this repository.
