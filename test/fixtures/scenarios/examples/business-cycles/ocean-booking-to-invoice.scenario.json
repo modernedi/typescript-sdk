@@ -1,0 +1,181 @@
+{
+  "apiVersion": "modernedi.com/scenario/v1",
+  "kind": "ScenarioDefinition",
+  "metadata": {"namespace": "modernedi.examples", "key": "ocean-booking-to-invoice", "version": "1.0.0"},
+  "spec": {
+    "parameters": [
+      {"id": "bookingRequestCount", "type": "decimal", "required": true},
+      {"id": "cancelRequested", "type": "boolean", "required": true},
+      {"id": "inquiryRequested", "type": "boolean", "required": true}
+    ],
+    "actors": [{"id": "shipper"}, {"id": "oceanCarrier"}],
+    "checkpoints": [{"id": "bookingDisposition"}, {"id": "statusInquiryDecision"}],
+    "steps": [
+      {
+        "id": "bookingRequest", "fromActor": "shipper", "toActor": "oceanCarrier",
+        "transaction": {"standard": "X12", "transactionSet": "300", "businessUsage": "booking_request_or_change"},
+        "occurrence": {"min": 1, "max": 5, "closure": {"kind": "expected_count", "parameter": "bookingRequestCount"}},
+        "facts": [
+          {"name": "bookingReference", "type": "string", "cardinality": "one", "normalization": ["trim", "uppercase"], "sensitivity": "business"},
+          {"name": "changeSequence", "type": "decimal", "cardinality": "one", "normalization": ["decimal_canonical"], "sensitivity": "business"}
+        ],
+        "pipeline": [
+          {"id": "exchange", "kind": "exchange"},
+          {"id": "extract", "kind": "extract", "facts": ["bookingReference", "changeSequence"]}
+        ]
+      },
+      {
+        "id": "bookingConfirmation", "fromActor": "oceanCarrier", "toActor": "shipper",
+        "transaction": {"standard": "X12", "transactionSet": "301", "businessUsage": "booking_confirmation"},
+        "occurrence": {"min": 1, "max": 1, "closure": {"kind": "fixed"}},
+        "facts": [
+          {"name": "bookingReference", "type": "string", "cardinality": "one", "normalization": ["trim", "uppercase"], "sensitivity": "business"}
+        ],
+        "pipeline": [
+          {"id": "exchange", "kind": "exchange"},
+          {"id": "extract", "kind": "extract", "facts": ["bookingReference"]},
+          {"id": "bookingDecided", "kind": "checkpoint", "checkpoint": "bookingDisposition"}
+        ]
+      },
+      {
+        "id": "bookingCancellation", "fromActor": "shipper", "toActor": "oceanCarrier",
+        "transaction": {"standard": "X12", "transactionSet": "303", "businessUsage": "booking_cancellation"},
+        "occurrence": {"min": 0, "max": 1, "closure": {"kind": "max_reached"}},
+        "facts": [
+          {"name": "bookingReference", "type": "string", "cardinality": "one", "normalization": ["trim", "uppercase"], "sensitivity": "business"}
+        ],
+        "pipeline": [
+          {"id": "exchange", "kind": "exchange"},
+          {"id": "extract", "kind": "extract", "facts": ["bookingReference"]}
+        ]
+      },
+      {
+        "id": "shippingInstructions", "fromActor": "shipper", "toActor": "oceanCarrier",
+        "transaction": {"standard": "X12", "transactionSet": "304", "businessUsage": "shipping_instructions"},
+        "occurrence": {"min": 0, "max": 1, "closure": {"kind": "max_reached"}},
+        "facts": [
+          {"name": "bookingReference", "type": "string", "cardinality": "one", "normalization": ["trim", "uppercase"], "sensitivity": "business"},
+          {"name": "containerNumber", "type": "string", "cardinality": "one", "normalization": ["trim", "uppercase"], "sensitivity": "restricted"}
+        ],
+        "pipeline": [
+          {"id": "exchange", "kind": "exchange"},
+          {"id": "extract", "kind": "extract", "facts": ["bookingReference", "containerNumber"]},
+          {"id": "inquiryDecision", "kind": "checkpoint", "checkpoint": "statusInquiryDecision"}
+        ]
+      },
+      {
+        "id": "shipmentStatus", "fromActor": "oceanCarrier", "toActor": "shipper",
+        "transaction": {"standard": "X12", "transactionSet": "315", "businessUsage": "shipment_status"},
+        "occurrence": {"min": 1, "max": 2, "closure": {"kind": "max_reached"}},
+        "facts": [
+          {"name": "bookingReference", "type": "string", "cardinality": "one", "normalization": ["trim", "uppercase"], "sensitivity": "business"},
+          {"name": "statusTimestamp", "type": "timestamp", "cardinality": "one", "normalization": [], "sensitivity": "business"}
+        ],
+        "pipeline": [
+          {"id": "exchange", "kind": "exchange"},
+          {"id": "extract", "kind": "extract", "facts": ["bookingReference", "statusTimestamp"]}
+        ]
+      },
+      {
+        "id": "statusInquiry", "fromActor": "shipper", "toActor": "oceanCarrier",
+        "transaction": {"standard": "X12", "transactionSet": "313", "businessUsage": "shipment_status_inquiry"},
+        "occurrence": {"min": 0, "max": 1, "closure": {"kind": "max_reached"}},
+        "facts": [
+          {"name": "bookingReference", "type": "string", "cardinality": "one", "normalization": ["trim", "uppercase"], "sensitivity": "business"}
+        ],
+        "pipeline": [
+          {"id": "exchange", "kind": "exchange"},
+          {"id": "extract", "kind": "extract", "facts": ["bookingReference"]}
+        ]
+      },
+      {
+        "id": "arrivalNotice", "fromActor": "oceanCarrier", "toActor": "shipper",
+        "transaction": {"standard": "X12", "transactionSet": "312", "businessUsage": "arrival_notice"},
+        "occurrence": {"min": 1, "max": 1, "closure": {"kind": "fixed"}},
+        "facts": [
+          {"name": "bookingReference", "type": "string", "cardinality": "one", "normalization": ["trim", "uppercase"], "sensitivity": "business"}
+        ],
+        "pipeline": [
+          {"id": "exchange", "kind": "exchange"},
+          {"id": "extract", "kind": "extract", "facts": ["bookingReference"]}
+        ]
+      },
+      {
+        "id": "freightInvoice", "fromActor": "oceanCarrier", "toActor": "shipper",
+        "transaction": {"standard": "X12", "transactionSet": "310", "businessUsage": "freight_receipt_and_invoice"},
+        "occurrence": {"min": 1, "max": 1, "closure": {"kind": "fixed"}},
+        "facts": [
+          {"name": "bookingReference", "type": "string", "cardinality": "one", "normalization": ["trim", "uppercase"], "sensitivity": "business"},
+          {"name": "invoiceAmount", "type": "decimal", "cardinality": "one", "normalization": ["decimal_canonical"], "sensitivity": "financial"}
+        ],
+        "pipeline": [
+          {"id": "exchange", "kind": "exchange"},
+          {"id": "extract", "kind": "extract", "facts": ["bookingReference", "invoiceAmount"]}
+        ]
+      }
+    ],
+    "transitions": [
+      {
+        "id": "laterBookingRequest", "fromStep": "bookingRequest", "toStep": "bookingRequest", "relationship": "supersedes", "correlations": [],
+        "matching": {"strategy": "previous", "quantifiers": [{"kind": "every", "scope": "to"}], "unmatched": "record"},
+        "effect": {"effectiveAt": {"kind": "observed_at"}, "downstream": "reevaluate", "unmatched": "record"}
+      },
+      {
+        "id": "confirmationForBooking", "fromStep": "bookingRequest", "toStep": "bookingConfirmation", "relationship": "follows",
+        "correlations": [{"id": "sameBooking", "operator": "equal", "left": {"kind": "fact", "stepId": "bookingRequest", "fact": "bookingReference", "projection": "value"}, "right": {"kind": "fact", "stepId": "bookingConfirmation", "fact": "bookingReference", "projection": "value"}}],
+        "matching": {"strategy": "correlate", "quantifiers": [{"kind": "every", "scope": "from"}, {"kind": "every", "scope": "to"}], "unmatched": "fail"}
+      },
+      {
+        "id": "cancelsBooking", "fromStep": "bookingConfirmation", "toStep": "bookingCancellation", "relationship": "cancels", "correlations": [],
+        "matching": {"strategy": "position", "quantifiers": [{"kind": "every", "scope": "to"}], "unmatched": "record"},
+        "effect": {"effectiveAt": {"kind": "observed_at"}, "downstream": "retain", "unmatched": "record"}
+      },
+      {
+        "id": "cancellationForBooking", "fromStep": "bookingConfirmation", "toStep": "bookingCancellation", "relationship": "follows",
+        "correlations": [{"id": "sameBooking", "operator": "equal", "left": {"kind": "fact", "stepId": "bookingConfirmation", "fact": "bookingReference", "projection": "value"}, "right": {"kind": "fact", "stepId": "bookingCancellation", "fact": "bookingReference", "projection": "value"}}],
+        "matching": {"strategy": "correlate", "quantifiers": [{"kind": "every", "scope": "from"}, {"kind": "every", "scope": "to"}], "unmatched": "fail"}
+      },
+      {
+        "id": "instructionsForBooking", "fromStep": "bookingConfirmation", "toStep": "shippingInstructions", "relationship": "follows", "correlations": [],
+        "matching": {"strategy": "position", "quantifiers": [{"kind": "every", "scope": "from"}, {"kind": "every", "scope": "to"}], "unmatched": "fail"}
+      },
+      {
+        "id": "statusForShipment", "fromStep": "shippingInstructions", "toStep": "shipmentStatus", "relationship": "follows",
+        "correlations": [{"id": "sameBooking", "operator": "equal", "left": {"kind": "fact", "stepId": "shippingInstructions", "fact": "bookingReference", "projection": "value"}, "right": {"kind": "fact", "stepId": "shipmentStatus", "fact": "bookingReference", "projection": "value"}}],
+        "matching": {"strategy": "correlate", "quantifiers": [{"kind": "every", "scope": "to"}, {"kind": "exactly", "scope": "pairs", "count": 2}], "unmatched": "fail"}
+      },
+      {
+        "id": "inquiryForShipment", "fromStep": "shippingInstructions", "toStep": "statusInquiry", "relationship": "follows", "correlations": [],
+        "matching": {"strategy": "position", "quantifiers": [{"kind": "every", "scope": "to"}], "unmatched": "record"}
+      },
+      {
+        "id": "arrivalAfterStatus", "fromStep": "shipmentStatus", "toStep": "arrivalNotice", "relationship": "follows", "correlations": [],
+        "matching": {"strategy": "position", "quantifiers": [{"kind": "any", "scope": "pairs"}], "unmatched": "record"}
+      },
+      {
+        "id": "invoiceSettlesArrival", "fromStep": "arrivalNotice", "toStep": "freightInvoice", "relationship": "follows", "correlations": [],
+        "matching": {"strategy": "position", "quantifiers": [{"kind": "every", "scope": "pairs"}], "unmatched": "fail"}
+      }
+    ],
+    "assertions": [
+      {"id": "bookingChangesMonotonic", "operator": "monotonic", "left": {"kind": "fact", "stepId": "bookingRequest", "fact": "changeSequence", "projection": "list"}},
+      {"id": "statusTimeMonotonic", "operator": "monotonic", "left": {"kind": "fact", "stepId": "shipmentStatus", "fact": "statusTimestamp", "projection": "list"}},
+      {"id": "invoiceNonnegative", "operator": "greater_than_or_equal", "left": {"kind": "fact", "stepId": "freightInvoice", "fact": "invoiceAmount", "projection": "value"}, "right": {"kind": "literal", "type": "decimal", "value": 0}}
+    ],
+    "branches": [
+      {
+        "id": "bookingOutcome", "mode": "exactly_one", "checkpoint": "bookingDisposition",
+        "alternatives": [
+          {"id": "cancel", "kind": "when", "transitionId": "cancellationForBooking", "conditions": [{"id": "cancelRequested", "operator": "equal", "left": {"kind": "parameter", "parameter": "cancelRequested"}, "right": {"kind": "literal", "type": "boolean", "value": true}}]},
+          {"id": "proceed", "kind": "otherwise", "transitionId": "instructionsForBooking", "conditions": []}
+        ]
+      },
+      {
+        "id": "statusInquiryChoice", "mode": "at_most_one", "checkpoint": "statusInquiryDecision",
+        "alternatives": [
+          {"id": "inquire", "kind": "when", "transitionId": "inquiryForShipment", "conditions": [{"id": "inquiryRequested", "operator": "equal", "left": {"kind": "parameter", "parameter": "inquiryRequested"}, "right": {"kind": "literal", "type": "boolean", "value": true}}]}
+        ]
+      }
+    ]
+  }
+}

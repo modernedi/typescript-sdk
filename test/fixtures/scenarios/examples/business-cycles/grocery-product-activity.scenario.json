@@ -1,0 +1,32 @@
+{
+  "apiVersion": "modernedi.com/scenario/v1",
+  "kind": "ScenarioDefinition",
+  "metadata": {"namespace": "modernedi.examples", "key": "grocery-product-activity", "version": "1.0.0"},
+  "spec": {
+    "parameters": [],
+    "actors": [{"id": "groceryBuyer"}, {"id": "grocerySupplier"}],
+    "steps": [
+      {
+        "id": "productActivity", "fromActor": "groceryBuyer", "toActor": "grocerySupplier",
+        "transaction": {"standard": "X12", "transactionSet": "852", "businessUsage": "product_activity_data"},
+        "occurrence": {"min": 1, "max": 1, "closure": {"kind": "fixed"}},
+        "facts": [
+          {"name": "reportDate", "type": "date", "cardinality": "one", "normalization": [], "sensitivity": "business"},
+          {"name": "reportedItems", "type": "list", "elementType": "string", "cardinality": "one", "normalization": [], "sensitivity": "business"},
+          {"name": "activityQuantities", "type": "list", "elementType": "decimal", "cardinality": "one", "normalization": [], "sensitivity": "business"}
+        ],
+        "pipeline": [
+          {"id": "exchange", "kind": "exchange"},
+          {"id": "extract", "kind": "extract", "facts": ["reportDate", "reportedItems", "activityQuantities"]}
+        ]
+      }
+    ],
+    "transitions": [],
+    "assertions": [
+      {"id": "reportDateExists", "operator": "exists", "left": {"kind": "fact", "stepId": "productActivity", "fact": "reportDate", "projection": "value"}},
+      {"id": "reportedItemsUnique", "operator": "unique", "left": {"kind": "fact", "stepId": "productActivity", "fact": "reportedItems", "projection": "value"}}
+    ],
+    "checkpoints": [],
+    "branches": []
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://www.modernedi.com/docs/scenarios/schemas/scenario-binding-v1.schema.json",
+  "apiVersion": "modernedi.com/scenario-binding-authoring/v1",
+  "kind": "ScenarioBinding",
+  "metadata": {
+    "id": "retailOrderInvoice",
+    "name": "Retail order to invoice"
+  },
+  "spec": {
+    "definition": {
+      "namespace": "acme",
+      "key": "retail-order-invoice",
+      "version": "1.0.0",
+      "contentSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    },
+    "environment": "production",
+    "actors": [
+      {
+        "actorId": "retailer",
+        "endpoint": {
+          "kind": "partner",
+          "partnerId": 42
+        }
+      },
+      {
+        "actorId": "supplier",
+        "endpoint": {
+          "kind": "workspace"
+        }
+      }
+    ],
+    "steps": [
+      {
+        "stepId": "purchaseOrder",
+        "target": {
+          "kind": "runtime-mapping",
+          "runtimeMappingId": 101
+        },
+        "factSources": [
+          {
+            "fact": "purchaseOrderNumber",
+            "source": {
+              "kind": "x12-mapper-expression",
+              "expression": "ST->BEG(03)"
+            }
+          }
+        ]
+      },
+      {
+        "stepId": "invoice",
+        "syntaxTree": {
+          "x12Version": "004010",
+          "transactionSet": "810"
+        },
+        "target": {
+          "kind": "runtime-mapping",
+          "runtimeMappingId": 102
+        },
+        "factSources": [
+          {
+            "fact": "purchaseOrderNumber",
+            "source": {
+              "kind": "x12-mapper-expression",
+              "expression": "ST->BIG(04)"
+            }
+          },
+          {
+            "fact": "invoiceTotal",
+            "source": {
+              "kind": "x12-mapper-expression",
+              "expression": "ST->TDS(01)"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

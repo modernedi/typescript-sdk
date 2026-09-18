@@ -1,0 +1,64 @@
+{
+  "name": "@modernedi/sdk",
+  "version": "0.8.0",
+  "description": "Official TypeScript SDK for the ModernEDI Integration API",
+  "license": "Apache-2.0",
+  "author": {
+    "name": "ModernEDI",
+    "email": "contact@modernedi.com",
+    "url": "https://www.modernedi.com/"
+  },
+  "keywords": [
+    "edi",
+    "x12",
+    "as2",
+    "electronic-data-interchange",
+    "b2b",
+    "integration",
+    "sdk",
+    "typescript"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "homepage": "https://www.modernedi.com/integration-api/",
+  "bugs": {
+    "url": "https://github.com/modernedi/typescript-sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/modernedi/typescript-sdk.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "node ./scripts/clean-dist.mjs && tsc -p tsconfig.json",
+    "test": "npm run build && tsc -p tsconfig.contract-tests.json && node --test test/*.test.mjs",
+    "typecheck:examples": "npm run build && tsc -p tsconfig.examples.json",
+    "verify": "node scripts/verify-public-source.mjs && npm test && tsc -p tsconfig.examples.json && npm pack --dry-run --ignore-scripts",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run verify"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.43",
+    "typescript": "^7.0.2"
+  }
+}
