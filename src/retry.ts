@@ -88,12 +88,14 @@ function isConfigurationPlanOperation(path: string, method: string): boolean {
 
 function requestCanBeRetried(input: RequestInfo | URL, init: RequestInit | undefined, basePath: string): boolean {
   const method = requestMethod(input, init);
+  const path = requestPath(input, basePath);
+  // Polling commits visibility leases even though the HTTP method is GET. A lost
+  // response must reach the caller, not silently lease a different batch on retry.
+  if (path === undefined || (method === "GET" && /^\/v1\/mapped-outputs\/?$/.test(path))) {
+    return false;
+  }
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
     return true;
-  }
-  const path = requestPath(input, basePath);
-  if (path === undefined) {
-    return false;
   }
   if (isTransactionWatchOperation(path, method)) {
     return true;
@@ -167,10 +169,11 @@ function exponentialDelay(attempt: number, options: NormalizedRetryOptions): num
 }
 
 /**
- * Adds conservative opt-in retries. GET/HEAD/OPTIONS, read-only configuration
+ * Adds conservative opt-in retries. Read-only GET/HEAD/OPTIONS, configuration
  * plans, and idempotent transaction watch/unwatch requests are safe to retry
  * without an `Idempotency-Key`; other mutating requests require a nonblank key
  * and an operation that declares idempotency support in the API contract.
+ * Mapped-output polling acquires leases and is never automatically retried.
  */
 export function createRetryingFetch(
   fetchApi: FetchAPI,

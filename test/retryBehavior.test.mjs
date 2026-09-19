@@ -5,6 +5,7 @@ import { ModernEdiClient, ModernEdiApiError, FetchError, createRetryingFetch } f
 
 const corpus = JSON.parse(readFileSync(new URL('./fixtures/retry-behavior.json', import.meta.url), 'utf8'));
 const groups = { getIntegrationUsage: 'account', planIntegrationConfiguration: 'configurationAsCode',
+  exportIntegrationConfiguration: 'configurationAsCode', pollMappedOutputs: 'mappedOutputs',
   testMappedOutputWebhook: 'mappedOutputs', sendGeneratedX12Message: 'outboundAs2',
   watchIntegrationTransaction: 'transactions', unwatchIntegrationTransaction: 'transactions' };
 
@@ -44,7 +45,12 @@ for (const row of corpus.cases) test(`shared retry behavior: ${row.id}`, async (
     assert.ok(failure instanceof ModernEdiApiError);
     assert.equal(failure.status, row.status);
     assert.equal(failure.retryAfter, row.retryAfter);
-  } else { assert.equal(failure, undefined); assert.equal(result.raw.status, row.status); }
+  } else {
+    assert.equal(failure, undefined);
+    assert.equal(result.raw.status, row.status);
+    if (row.emptyBody) assert.equal(await result.value(), undefined);
+    if (row.etag) assert.equal(result.raw.headers.get('ETag'), row.etag);
+  }
 });
 
 test('retry allow-list does not match suffix lookalikes or the wrong method', async () => {

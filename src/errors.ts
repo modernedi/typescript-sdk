@@ -98,7 +98,8 @@ export async function modernEdiApiErrorFromResponse(
 export function createModernEdiErrorMiddleware(): Middleware {
   return {
     async post({ response }) {
-      if (!response.ok) {
+      // The generated operation still enforces which statuses its contract accepts.
+      if (!response.ok && response.status !== 304) {
         throw await modernEdiApiErrorFromResponse(response);
       }
       return response;

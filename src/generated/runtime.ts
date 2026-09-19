@@ -129,7 +129,7 @@ export class BaseAPI {
     protected async request(context: RequestOpts, initOverrides?: RequestInit | InitOverrideFunction): Promise<Response> {
         const { url, init } = await this.createFetchParams(context, initOverrides);
         const response = await this.fetchApi(url, init);
-        if (response && (response.status >= 200 && response.status < 300)) {
+        if (response && ((response.status >= 200 && response.status < 300) || context.acceptedStatuses?.includes(response.status))) {
             return response;
         }
         throw new ResponseError(response, 'Response returned an error code');
@@ -316,6 +316,7 @@ export interface FetchParams {
 }
 
 export interface RequestOpts {
+    acceptedStatuses?: readonly number[];
     path: string;
     method: HTTPMethod;
     headers: HTTPHeaders;

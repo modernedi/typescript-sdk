@@ -48,30 +48,6 @@ export interface MappedOutputAckResponse {
      * @memberof MappedOutputAckResponse
      */
     acknowledgment: MappedOutputAcknowledgment;
-    /**
-     * Mapped output id that was marked received.
-     * @type {string}
-     * @memberof MappedOutputAckResponse
-     */
-    id: string;
-    /**
-     * Original inbound AS2 message id for the mapped output.
-     * @type {string}
-     * @memberof MappedOutputAckResponse
-     */
-    messageId: string;
-    /**
-     * Unique mapped-output key inside the transaction.
-     * @type {string}
-     * @memberof MappedOutputAckResponse
-     */
-    mappedOutputKey: string;
-    /**
-     * UTC RFC 3339 instant with exactly nine fractional digits and a trailing `Z`, or `null`.
-     * @type {string}
-     * @memberof MappedOutputAckResponse
-     */
-    ackedAt?: string | null;
 }
 
 
@@ -83,9 +59,6 @@ export function instanceOfMappedOutputAckResponse(value: object): value is Mappe
     if (!('success' in value) || value['success'] === undefined) return false;
     if (!('environment' in value) || value['environment'] === undefined) return false;
     if (!('acknowledgment' in value) || value['acknowledgment'] === undefined) return false;
-    if (!('id' in value) || value['id'] === undefined) return false;
-    if (!('messageId' in value) || value['messageId'] === undefined) return false;
-    if (!('mappedOutputKey' in value) || value['mappedOutputKey'] === undefined) return false;
     return true;
 }
 
@@ -102,10 +75,6 @@ export function MappedOutputAckResponseFromJSONTyped(json: any, ignoreDiscrimina
         'success': json['success'],
         'environment': TransactionEnvironmentValueFromJSON(json['environment']),
         'acknowledgment': MappedOutputAcknowledgmentFromJSON(json['acknowledgment']),
-        'id': json['id'],
-        'messageId': json['messageId'],
-        'mappedOutputKey': json['mappedOutputKey'],
-        'ackedAt': json['ackedAt'] === undefined ? undefined : json['ackedAt'] === null ? null : json['ackedAt'],
     };
 }
 
@@ -123,9 +92,5 @@ export function MappedOutputAckResponseToJSONTyped(value?: MappedOutputAckRespon
         'success': value['success'],
         'environment': TransactionEnvironmentValueToJSON(value['environment']),
         'acknowledgment': MappedOutputAcknowledgmentToJSON(value['acknowledgment']),
-        'id': value['id'],
-        'messageId': value['messageId'],
-        'mappedOutputKey': value['mappedOutputKey'],
-        'ackedAt': value['ackedAt'],
     };
 }

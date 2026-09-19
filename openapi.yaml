@@ -3586,7 +3586,7 @@ paths:
       x-required-scope: transactions:read
       description: |
         **Required key scope:** `transactions:read`.
-        Returns server-managed mapped inbound documents for this tenant and temporarily marks them in progress. Transaction-record-only results and legacy direct-to-SQS or direct-to-DynamoDB outputs are not duplicated into this queue. If a returned message is not acknowledged before the visibility timeout expires, ModernEDI may return it again on a later poll. Push delivery uses the same queue state: a successful 2xx webhook response acknowledges the message, while a failed push leaves it available through this endpoint. Each request performs a bounded scan. When `hasMore` is true, send `nextCursor` as the next request's `cursor` so polling advances past unavailable or output-free transactions instead of rescanning them. This endpoint runs on the shared ModernEDI API host, not on the tenant AS2 hostname.
+        Returns server-managed mapped inbound documents for this tenant and temporarily marks them in progress. Transaction-record-only results and legacy direct-to-SQS or direct-to-DynamoDB outputs are not duplicated into this queue. If a returned message is not acknowledged before the visibility timeout expires, ModernEDI may return it again on a later poll. Push delivery uses the same queue state: a successful 2xx webhook response acknowledges the message, while a failed push leaves it available through this endpoint. Each request performs a bounded scan. When `hasMore` is true, send `nextCursor` as the next request's `cursor` so polling advances past unavailable or output-free transactions instead of rescanning them. A cursor may repeat while new leases advance through outputs in the same scan window; an empty page with `nextCursor` is not the end of the scan. Use the SDK's bounded mapped-output iterator, not ordinary list pagination. Despite using GET, a poll acquires leases and the SDKs do not automatically retry it. If a response is lost, its outputs become available again after the visibility timeout. This endpoint runs on the shared ModernEDI API host, not on the tenant AS2 hostname.
       x-codeSamples:
         - lang: curl
           label: cURL
@@ -3891,10 +3891,6 @@ paths:
                   messageId: msg-850-api
                   mappedOutputKey: 17#0001#00001
                   ackedAt: '2026-04-29T15:34:10.000000000Z'
-                id: 7e8276c1d55988a4bf7fbf9f8c2d87187a24bd316dfed84bbf64397b8d5b6e4a
-                messageId: msg-850-api
-                mappedOutputKey: 17#0001#00001
-                ackedAt: '2026-04-29T15:34:10.000000000Z'
         '400':
           description: Missing receipt handle or no current in-progress message matched the id and receipt handle.
           content:
@@ -9704,13 +9700,11 @@ components:
     MappedOutputAckResponse:
       description: Confirmation that one leased mapped output moved into acknowledged-by-your-integration custody.
       type: object
+      additionalProperties: false
       required:
         - success
         - environment
         - acknowledgment
-        - id
-        - messageId
-        - mappedOutputKey
       properties:
         success:
           type: boolean
@@ -9722,18 +9716,6 @@ components:
         acknowledgment:
           description: Canonical identity and acknowledgment timestamp for the output now held by your integration.
           $ref: '#/components/schemas/MappedOutputAcknowledgment'
-        id:
-          type: string
-          description: Mapped output id that was marked received.
-        messageId:
-          type: string
-          description: Original inbound AS2 message id for the mapped output.
-        mappedOutputKey:
-          type: string
-          description: Unique mapped-output key inside the transaction.
-        ackedAt:
-          $ref: '#/components/schemas/NullableUtcTimestamp'
-          description: UTC instant when the mapped output was acknowledged.
     MappedOutputAcknowledgment:
       description: Durable receipt record proving when your integration acknowledged one mapped output version.
       type: object

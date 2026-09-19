@@ -97,6 +97,7 @@ it does not create directories or a ZIP archive.
 
 ```ts
 const exported = await modernEdi.configurationAsCode.exportIntegrationConfiguration({});
+if (!exported) throw new Error("Unconditional export returned no body");
 
 console.log(exported.bundleSha256, exported.snapshotEtag);
 for (const file of exported.files) {
@@ -104,10 +105,11 @@ for (const file of exported.files) {
 }
 ```
 
-Call the generated `exportIntegrationConfigurationRaw(...)` helper when you need the HTTP `ETag`
-header. The generated request accepts `ifNoneMatch`; because `304` has no response body, the common
-SDK error boundary reports that status as a `ModernEdiApiError` with `status === 304`. Treat that one
-status as an unchanged snapshot and continue handling every other error normally.
+Call `exportIntegrationConfigurationRaw(...)` when you need the HTTP `ETag` header.
+Pass the previous ETag as `ifNoneMatch` to avoid downloading an unchanged snapshot.
+A matching snapshot returns HTTP `304`, and `await response.value()` returns `undefined`;
+this is not an error. The normal `exportIntegrationConfiguration(...)` method likewise
+returns `undefined` for `304`, or a `ConfigurationExportResponse` for `200`.
 
 ## Plan workspace configuration
 
@@ -452,7 +454,7 @@ The client uses its configured `baseUrl` to match exact operation paths. If you 
 
 ## Cursor pagination
 
-ModernEDI cursors are opaque. Return them to the same endpoint and environment unchanged:
+ModernEDI list cursors are opaque. Return them to the same endpoint and environment unchanged:
 
 ```ts
 import { paginateCursor } from "@modernedi/sdk";
@@ -472,6 +474,30 @@ for await (const transaction of paginateCursor(
   console.log(transaction);
 }
 ```
+
+## Mapped-output queue iteration
+
+For mapped-output **queue** consumption, use the bounded `iterateMappedOutputs` helper:
+
+```ts
+import { iterateMappedOutputs } from "@modernedi/sdk";
+
+for await (const output of iterateMappedOutputs(
+  cursor => modernEdi.mappedOutputs.pollMappedOutputs({ cursor, environment: "test", limit: 10 }),
+  { maxPolls: 20 },
+)) {
+  // Durably save/deduplicate output.id before acknowledging its latest receiptHandle.
+  console.log(output.id);
+}
+```
+
+Repeated cursors are valid here, and empty pages can still have a continuation cursor.
+The helper stops at the end of the scan or its poll limit (default 1,000). It does not
+acknowledge, deduplicate, or continuously watch. Polls acquire leases and are never
+automatically retried, even when SDK retries are enabled. After a lost response,
+unacknowledged outputs become available again when their visibility timeout expires.
+Single-output acknowledgment details live under `response.acknowledgment`, alongside
+the top-level `success` and `environment` fields; there are no duplicate top-level identities.
 
 ## Generated API groups
 
