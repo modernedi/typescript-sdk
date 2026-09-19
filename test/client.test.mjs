@@ -583,7 +583,7 @@ test("retry wrapper can retry an idempotent mutation", async () => {
     { maxAttempts: 2, baseDelayMs: 0 },
   );
 
-  const response = await retryingFetch("https://example.test/resource", {
+  const response = await retryingFetch("https://example.test/v1/scenario-runs", {
     method: "POST",
     headers: { "Idempotency-Key": "stable-operation-id" },
   });
@@ -601,6 +601,7 @@ test("retry wrapper retries the exact read-only configuration plan operation und
       });
     },
     { maxAttempts: 2, baseDelayMs: 0 },
+    "https://example.test/edi",
   );
 
   const response = await retryingFetch("https://example.test/edi/v1/configuration/plan", {

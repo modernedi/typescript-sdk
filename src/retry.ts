@@ -1,6 +1,13 @@
 import type { FetchAPI } from "./generated/runtime.js";
+import { IDEMPOTENCY_KEY_OPERATIONS } from "./generated/buildMetadata.js";
 
 const DEFAULT_RETRYABLE_STATUSES = [429, 502, 503, 504] as const;
+const idempotencyKeyOperations = IDEMPOTENCY_KEY_OPERATIONS.map(({ method, path }) => ({
+  method,
+  path: new RegExp(`^${path.split("/").map(segment =>
+    /^\{[^}]+\}$/.test(segment) ? "[^/]+" : segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  ).join("/")}/?$`),
+}));
 
 export interface ModernEdiRetryOptions {
   /**
@@ -50,7 +57,7 @@ function requestMethod(input: RequestInfo | URL, init: RequestInit | undefined):
   return "GET";
 }
 
-function requestPath(input: RequestInfo | URL): string | undefined {
+function requestPath(input: RequestInfo | URL, basePath: string): string | undefined {
   const value =
     typeof input === "string"
       ? input
@@ -58,44 +65,47 @@ function requestPath(input: RequestInfo | URL): string | undefined {
         ? input.href
         : input.url;
   try {
-    return new URL(value, "https://sdk.invalid").pathname;
+    const path = new URL(value, "https://sdk.invalid").pathname;
+    return path.startsWith(`${basePath}/`) ? path.slice(basePath.length) : undefined;
   } catch {
     return undefined;
   }
 }
 
-function isTransactionWatchOperation(input: RequestInfo | URL, method: string): boolean {
+function isTransactionWatchOperation(path: string, method: string): boolean {
   if (method !== "PUT" && method !== "DELETE") {
     return false;
   }
-  const path = requestPath(input);
-  return path !== undefined
-    && /\/v1\/integration\/transactions\/[^/]+\/[^/]+\/watch\/?$/.test(path);
+  return /^\/v1\/integration\/transactions\/[^/]+\/[^/]+\/watch\/?$/.test(path);
 }
 
-function isConfigurationPlanOperation(input: RequestInfo | URL, method: string): boolean {
+function isConfigurationPlanOperation(path: string, method: string): boolean {
   if (method !== "POST") {
     return false;
   }
-  const path = requestPath(input);
-  return path !== undefined && /\/v1\/configuration\/plan\/?$/.test(path);
+  return /^\/v1\/configuration\/plan\/?$/.test(path);
 }
 
-function requestCanBeRetried(input: RequestInfo | URL, init: RequestInit | undefined): boolean {
+function requestCanBeRetried(input: RequestInfo | URL, init: RequestInit | undefined, basePath: string): boolean {
   const method = requestMethod(input, init);
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
     return true;
   }
-  if (isTransactionWatchOperation(input, method)) {
+  const path = requestPath(input, basePath);
+  if (path === undefined) {
+    return false;
+  }
+  if (isTransactionWatchOperation(path, method)) {
     return true;
   }
-  if (isConfigurationPlanOperation(input, method)) {
+  if (isConfigurationPlanOperation(path, method)) {
     return true;
   }
   const requestHeaders =
     init?.headers
     ?? (typeof input !== "string" && !(input instanceof URL) ? input.headers : undefined);
-  return new Headers(requestHeaders).has("Idempotency-Key");
+  return Boolean(new Headers(requestHeaders).get("Idempotency-Key")?.trim())
+    && idempotencyKeyOperations.some(operation => operation.method === method && operation.path.test(path));
 }
 
 function retryAfterMilliseconds(response: Response): number | undefined {
@@ -159,15 +169,18 @@ function exponentialDelay(attempt: number, options: NormalizedRetryOptions): num
 /**
  * Adds conservative opt-in retries. GET/HEAD/OPTIONS, read-only configuration
  * plans, and idempotent transaction watch/unwatch requests are safe to retry
- * without an `Idempotency-Key`; other mutating requests require one.
+ * without an `Idempotency-Key`; other mutating requests require a nonblank key
+ * and an operation that declares idempotency support in the API contract.
  */
 export function createRetryingFetch(
   fetchApi: FetchAPI,
   retryOptions: ModernEdiRetryOptions = {},
+  baseUrl: string = "https://api.modernedi.com",
 ): FetchAPI {
   const options = normalizeRetryOptions(retryOptions);
+  const basePath = new URL(baseUrl).pathname.replace(/\/+$/, "");
   return async (input, init) => {
-    const retryableRequest = requestCanBeRetried(input, init);
+    const retryableRequest = requestCanBeRetried(input, init, basePath);
     for (let attempt = 1; attempt <= options.maxAttempts; attempt += 1) {
       try {
         const response = await fetchApi(input, init);

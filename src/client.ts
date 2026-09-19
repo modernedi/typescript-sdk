@@ -43,7 +43,8 @@ export type ModernEdiClientOptions = ModernEdiAuthentication & {
   middleware?: Middleware[];
   /**
    * Opt-in retries. Safe reads, read-only configuration plans, and idempotent transaction
-   * watch/unwatch operations may be retried; other mutations require an `Idempotency-Key`.
+   * watch/unwatch operations may be retried; other mutations require a nonblank
+   * `Idempotency-Key` and declared idempotency support in the API contract.
    */
   retry?: ModernEdiRetryOptions;
 };
@@ -63,11 +64,12 @@ export function createModernEdiConfiguration(options: ModernEdiClientOptions): C
   }
 
   const fetchApi = options.fetch ?? defaultFetch();
+  const basePath = (options.baseUrl ?? MODERNEDI_API_BASE_URL).replace(/\/+$/, "");
   const configuredFetch =
-    options.retry === undefined ? fetchApi : createRetryingFetch(fetchApi, options.retry);
+    options.retry === undefined ? fetchApi : createRetryingFetch(fetchApi, options.retry, basePath);
 
   return new Configuration({
-    basePath: (options.baseUrl ?? MODERNEDI_API_BASE_URL).replace(/\/+$/, ""),
+    basePath,
     fetchApi: configuredFetch,
     ...(options.apiKey === undefined ? {} : { apiKey: options.apiKey }),
     ...(options.bearerToken === undefined ? {} : { accessToken: options.bearerToken }),

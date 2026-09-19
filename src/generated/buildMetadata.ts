@@ -67,3 +67,53 @@ export const GENERATED_OPERATION_IDS = [
   "listX12Versions",
   "listX12TransactionSets"
 ] as const;
+export const IDEMPOTENCY_KEY_OPERATIONS = [
+  {
+    "method": "POST",
+    "path": "/v1/scenario-runs/{runId}/advance"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/configuration/apply"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/scenario-runs/{runId}/observations"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/scenario-runs/{runId}/cancel"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/as2/x12/carbonCopy"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/integration/transactions/{messageId}/{transactionKey}/replays"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/as2/reply"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/as2/x12/reply"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/as2/carbonCopy"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/as2/send"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/as2/x12/send"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/scenario-runs"
+  }
+] as const;

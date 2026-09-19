@@ -438,12 +438,17 @@ const modernEdi = new ModernEdiClient({
 ```
 
 The SDK retries GET, HEAD, and OPTIONS requests, read-only configuration plans, idempotent
-transaction watch/unwatch requests, and requests carrying an `Idempotency-Key`.
+transaction watch/unwatch requests, and mutations whose API operation explicitly supports a
+nonblank `Idempotency-Key`. Adding that header to an unrelated operation (for example, testing
+a mapped-output webhook) does not make it safe to retry.
 It retries only `429`, `502`, `503`, and `504` by default. It never retries before `Retry-After`;
 when the server requests a delay longer than `maxDelayMs`, the SDK returns that response to the
 normal error path instead of waiting indefinitely or retrying early. Apart from watch/unwatch, a
 mutation without an idempotency key is never automatically retried, because the SDK cannot rule
 out a duplicate side effect.
+
+The client uses its configured `baseUrl` to match exact operation paths. If you use
+`createRetryingFetch` directly with a custom base path, pass that base URL as its third argument.
 
 ## Cursor pagination
 
