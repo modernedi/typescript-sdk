@@ -13644,7 +13644,7 @@ components:
           description: Usage counters and entitlement thresholds current at `asOf`.
           $ref: '#/components/schemas/UsageSnapshot'
     UsageSnapshot:
-      description: Workspace AS2-message usage and self-service plan enforcement state, measured in UTC.
+      description: Workspace AS2-message usage across Production and Test traffic and self-service plan enforcement state, measured in UTC. Both traffic environments share one daily quota. Transaction-based breakdowns count a message ID once per traffic environment, even if the same ID exists in both.
       type: object
       required:
         - asOf
@@ -13687,7 +13687,7 @@ components:
           description: Attempted-message count after which new AS2 messages are rejected, or `null` for unlimited plans.
         attemptedMessagesToday:
           type: integer
-          description: AS2 messages attempted since 00:00 UTC, including accepted and rejected messages.
+          description: AS2 messages attempted across Production and Test traffic since 00:00 UTC, including accepted and rejected messages. Quota status and usage notifications use this count.
         acceptedMessagesToday:
           type: integer
           description: AS2 messages accepted for processing since 00:00 UTC.

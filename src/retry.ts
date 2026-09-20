@@ -184,32 +184,45 @@ export function createRetryingFetch(
   const basePath = new URL(baseUrl).pathname.replace(/\/+$/, "");
   return async (input, init) => {
     const retryableRequest = requestCanBeRetried(input, init, basePath);
-    for (let attempt = 1; attempt <= options.maxAttempts; attempt += 1) {
-      try {
-        const response = await fetchApi(input, init);
-        const shouldRetry =
-          retryableRequest &&
-          attempt < options.maxAttempts &&
-          options.retryableStatuses.has(response.status);
-        if (!shouldRetry) {
-          return response;
-        }
-        const retryAfter = retryAfterMilliseconds(response);
-        if (retryAfter !== undefined && retryAfter > options.maxDelayMs) {
-          // Never retry earlier than the server requested. Return the response so the normal
-          // structured error exposes Retry-After and the caller can schedule a later attempt.
-          return response;
-        }
-        const waitFor = retryAfter ?? exponentialDelay(attempt, options);
-        await response.body?.cancel();
-        await delay(waitFor, init?.signal);
-      } catch (error) {
-        if (!retryableRequest || attempt >= options.maxAttempts || init?.signal?.aborted) {
-          throw error;
-        }
-        await delay(exponentialDelay(attempt, options), init?.signal);
-      }
+    if (!retryableRequest || options.maxAttempts === 1) {
+      return fetchApi(input, init);
     }
-    throw new Error("Retry loop exhausted without returning or throwing");
+    // Merge RequestInit once (including signal overrides), and retain an unread
+    // body for retries. Fetch consumes each clone, not the retry template.
+    const request = typeof input === "string" || input instanceof URL ? null : new Request(input, init);
+    const signal = request?.signal ?? init?.signal;
+    try {
+      for (let attempt = 1; attempt <= options.maxAttempts; attempt += 1) {
+        if (signal?.aborted) {
+          throw signal.reason ?? abortError();
+        }
+        try {
+          const response = await fetchApi(request?.clone() ?? input, request == null ? init : undefined);
+          const shouldRetry = attempt < options.maxAttempts && options.retryableStatuses.has(response.status);
+          if (!shouldRetry) {
+            return response;
+          }
+          const retryAfter = retryAfterMilliseconds(response);
+          if (retryAfter !== undefined && retryAfter > options.maxDelayMs) {
+            // Never retry earlier than the server requested. Return the response so the normal
+            // structured error exposes Retry-After and the caller can schedule a later attempt.
+            return response;
+          }
+          const waitFor = retryAfter ?? exponentialDelay(attempt, options);
+          await response.body?.cancel();
+          await delay(waitFor, signal);
+        } catch (error) {
+          if (attempt >= options.maxAttempts || signal?.aborted) {
+            throw error;
+          }
+          await delay(exponentialDelay(attempt, options), signal);
+        }
+      }
+      throw new Error("Retry loop exhausted without returning or throwing");
+    } finally {
+      // A cloned stream's cancellation may await its sibling; do not delay the
+      // response while releasing the unused retry branch.
+      void request?.body?.cancel().catch(() => {});
+    }
   };
 }

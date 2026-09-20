@@ -39,7 +39,7 @@ import {
 } from './UsageDay.js';
 
 /**
- * Workspace AS2-message usage and self-service plan enforcement state, measured in UTC.
+ * Workspace AS2-message usage across Production and Test traffic and self-service plan enforcement state, measured in UTC. Both traffic environments share one daily quota. Transaction-based breakdowns count a message ID once per traffic environment, even if the same ID exists in both.
  * @export
  * @interface UsageSnapshot
  */
@@ -81,7 +81,7 @@ export interface UsageSnapshot {
      */
     rejectionThreshold?: number | null;
     /**
-     * AS2 messages attempted since 00:00 UTC, including accepted and rejected messages.
+     * AS2 messages attempted across Production and Test traffic since 00:00 UTC, including accepted and rejected messages. Quota status and usage notifications use this count.
      * @type {number}
      * @memberof UsageSnapshot
      */

@@ -451,6 +451,8 @@ out a duplicate side effect.
 
 The client uses its configured `baseUrl` to match exact operation paths. If you use
 `createRetryingFetch` directly with a custom base path, pass that base URL as its third argument.
+It accepts `Request` objects as well as URLs, preserves the body across eligible retries, and
+honors cancellation from the request or an overriding `RequestInit.signal`, including during backoff.
 
 ## Cursor pagination
 
