@@ -66,7 +66,8 @@ test('retry allow-list does not match suffix lookalikes or the wrong method', as
   }
 });
 
-test('Request POST retries send identical bodies through real fetch', async (t) => {
+for (const inputKind of ['string', 'URL', 'Request']) for (const bodyKind of ['string', 'stream']) {
+test(`${inputKind} POST retries send identical ${bodyKind} bodies through real fetch`, async (t) => {
   const calls = [];
   const server = createServer(async (request, response) => {
     const chunks = [];
@@ -81,14 +82,22 @@ test('Request POST retries send identical bodies through real fetch', async (t) 
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
   const retryingFetch = createRetryingFetch(fetch, { maxAttempts: 3, baseDelayMs: 0 }, baseUrl);
   const body = JSON.stringify({ synthetic: 'mapping \u2192 configuration' });
-  const response = await retryingFetch(new Request(`${baseUrl}/v1/configuration/plan`, {
-    method: 'POST', body, headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'synthetic' },
-  }));
+  const init = {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'synthetic' },
+    body: bodyKind === 'stream' ? new ReadableStream({ start(controller) {
+      controller.enqueue(new TextEncoder().encode(body)); controller.close();
+    } }) : body,
+    ...(bodyKind === 'stream' ? { duplex: 'half' } : {}),
+  };
+  const url = `${baseUrl}/v1/configuration/plan`;
+  const response = inputKind === 'Request' ? await retryingFetch(new Request(url, init))
+    : await retryingFetch(inputKind === 'URL' ? new URL(url) : url, init);
   assert.equal(response.status, 200);
   assert.equal(await response.text(), 'done');
   assert.deepEqual(calls, Array.from({ length: 2 }, () => ({ body, method: 'POST',
     contentType: 'application/json', idempotencyKey: 'synthetic' })));
 });
+}
 
 test('Request retries preserve the merged body, method, headers, and signal overrides', async () => {
   const controller = new AbortController();
@@ -118,6 +127,59 @@ test('an already consumed Request fails before making retry attempts', async () 
   await assert.rejects(retryingFetch(request), TypeError);
   assert.equal(calls, 0);
 });
+
+test('a consumed but unlocked URL body stream fails before making retry attempts', async () => {
+  const body = new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array([1])); controller.close(); } });
+  const reader = body.getReader();
+  await reader.read();
+  reader.releaseLock();
+  let calls = 0;
+  const retryingFetch = createRetryingFetch(async () => { calls++; return new Response(); }, { baseDelayMs: 0 });
+  await assert.rejects(retryingFetch('https://sdk.example.test/v1/configuration/plan', {
+    method: 'POST', body, duplex: 'half',
+  }), TypeError);
+  assert.equal(calls, 0);
+});
+
+test('URL stream retries preserve custom fetch options after a consumed-body network failure', async () => {
+  const url = new URL('https://sdk.example.test/v1/configuration/plan');
+  const dispatcher = { synthetic: true };
+  const controller = new AbortController();
+  const bodies = [];
+  const retryingFetch = createRetryingFetch(async (input, init) => {
+    assert.equal(input, url);
+    assert.equal(init.dispatcher, dispatcher);
+    assert.equal(init.signal, controller.signal);
+    assert.equal(init.duplex, 'half');
+    bodies.push(await new Response(init.body).text());
+    if (bodies.length === 1) throw new TypeError('Synthetic network failure after consuming body');
+    return new Response(null, { status: 200 });
+  }, { baseDelayMs: 0 });
+  const response = await retryingFetch(url, {
+    method: 'POST', body: new Response('synthetic body').body, duplex: 'half',
+    dispatcher, signal: controller.signal,
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(bodies, ['synthetic body', 'synthetic body']);
+});
+
+for (const options of [{ retry: { maxAttempts: 1 }, path: '/v1/configuration/plan' },
+  { retry: { maxAttempts: 3 }, path: '/v1/as2/send' }]) {
+  test(`URL streams are not cloned or retried for ${JSON.stringify(options)}`, async () => {
+    const url = `https://sdk.example.test${options.path}`;
+    const init = { method: 'POST', body: new Response('synthetic body').body, duplex: 'half' };
+    let calls = 0;
+    const retryingFetch = createRetryingFetch(async (input, requestInit) => {
+      calls++;
+      assert.equal(input, url);
+      assert.equal(requestInit, init);
+      await new Response(requestInit.body).text();
+      return new Response(null, { status: 503 });
+    }, options.retry);
+    assert.equal((await retryingFetch(url, init)).status, 503);
+    assert.equal(calls, 1);
+  });
+}
 
 test('an already aborted Request is not retried', async () => {
   const controller = new AbortController();

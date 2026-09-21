@@ -189,7 +189,8 @@ export function createRetryingFetch(
     }
     // Merge RequestInit once (including signal overrides), and retain an unread
     // body for retries. Fetch consumes each clone, not the retry template.
-    const request = typeof input === "string" || input instanceof URL ? null : new Request(input, init);
+    const isRequest = typeof input !== "string" && !(input instanceof URL);
+    const request = isRequest || init?.body instanceof ReadableStream ? new Request(input, init) : null;
     const signal = request?.signal ?? init?.signal;
     try {
       for (let attempt = 1; attempt <= options.maxAttempts; attempt += 1) {
@@ -197,7 +198,11 @@ export function createRetryingFetch(
           throw signal.reason ?? abortError();
         }
         try {
-          const response = await fetchApi(request?.clone() ?? input, request == null ? init : undefined);
+          const requestAttempt = request?.clone();
+          // Keep URL inputs and their original RequestInit options (including fetch extensions),
+          // replacing only the single-use body with a fresh clone.
+          const attemptInit = requestAttempt && !isRequest ? { ...init, body: requestAttempt.body } : init;
+          const response = await fetchApi(isRequest ? requestAttempt! : input, isRequest ? undefined : attemptInit);
           const shouldRetry = attempt < options.maxAttempts && options.retryableStatuses.has(response.status);
           if (!shouldRetry) {
             return response;
