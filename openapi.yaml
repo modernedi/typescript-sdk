@@ -17109,7 +17109,7 @@ components:
           pattern: \S
         parameters:
           type: object
-          additionalProperties: false
+          additionalProperties: true
           maxProperties: 100
           description: Ordinary run parameters, resolved and type-checked against this exact definition.
         observations:
