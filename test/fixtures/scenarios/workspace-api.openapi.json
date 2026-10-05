@@ -2736,7 +2736,7 @@
         "tags": [
           "Runs"
         ],
-        "summary": "Advance adapter work or reevaluate graph deadlines",
+        "summary": "Advance work, reevaluate deadlines, or explicitly close document collection",
         "description": "When runtime guidance selects a server-controlled step, this command dispatches or reconciles that step. Before external dispatch, ModernEDI prepares the current runtime dependencies and reconfirms the managed adapter target against the run's frozen binding authority. A temporary preparation outage is retryable and may return Retry-After; an incomplete or changed binding, or an unavailable target executor, rejects the command before dispatch. A failed adapter or preparation advance is durable: retry it with the current run ETag and a fresh Idempotency-Key. Reusing the failed operation's Idempotency-Key is a pure replay and never attempts preparation or dispatch again. Transient downstream rejections use scenario_adapter_dispatch_retryable; when the supplied x-api-key must be corrected they use scenario_adapter_dispatch_api_key_correction_required. The selected step and occurrence stay in structured run guidance instead of changing the stable error code. Observation-only and runtime-mapping steps still advance through the observation operation. For a waiting scenario run, the same empty-body command can safely ask the evaluator to recheck elapsed time: before every declared transition window and evidence deadline expires it returns HTTP 409 with scenario_observation_required, creates no operation, and leaves the run revision and ETag unchanged; once durable evidence reevaluation reaches a terminal outcome, it atomically persists a reevaluate_graph_clock operation and the completed run. The reevaluate_graph_clock value is the stable operation action recorded for this time-based reevaluation; it does not name another API. This time reevaluation never accepts x-api-key. The command rejects a stale ETag (optimistic concurrency), and replaying the same Idempotency-Key safely returns the original result (idempotency). x-api-key, when required by a selected adapter, is a transient Integration API credential used for that adapter operation only; it is not Workspace API authentication and is never persisted.",
         "security": [
           {
@@ -2772,6 +2772,7 @@
           "scenario_operation_in_progress",
           "scenario_run_operation_limit_exceeded",
           "scenario_run_result_bytes_limit_exceeded",
+          "scenario_step_closure_unavailable",
           "scenario_operation_ownership_lost",
           "integration_api_key_required",
           "integration_api_key_not_allowed",
@@ -3221,6 +3222,7 @@
           "scenario_observation_identity_conflict",
           "scenario_checkpoint_conflict",
           "scenario_observation_attempt_expired",
+          "scenario_step_closed",
           "transaction_not_found",
           "transaction_messageid_mismatch",
           "transaction_transactionkey_mismatch",
@@ -7637,7 +7639,19 @@
         "type": "object",
         "additionalProperties": false,
         "required": [],
-        "properties": {}
+        "properties": {
+          "closeSteps": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,127}$"
+            },
+            "description": "Optional explicit no-more-documents decision. Only reachable open steps declared with closure.kind=explicit are eligible. Their exact attached counts and server time are recorded atomically with the result and actor-attributed operation. All business and evidence checks still apply; incomplete fulfillment can fail. New documents cannot be attached after closure, but existing observations can refresh pending evidence while the run remains active. This action never dispatches EDI and needs no messages:write scope or supplemental x-api-key. It cannot bypass an expired deadline. For an ambiguous response retry the same list, If-Match and Idempotency-Key."
+          }
+        }
       },
       "CancelScenarioRunRequest": {
         "type": "object",
@@ -8052,6 +8066,10 @@
             "type": "boolean",
             "description": "True only for runtime_mapping and observation_only targets. Adapter steps are advanced through /advance."
           },
+          "closable": {
+            "const": true,
+            "description": "Present and true only when the server currently permits explicitly closing this step through advance.closeSteps. Omitted otherwise. Reaching max does not close an explicit stream."
+          },
           "occurrence": {
             "type": "object",
             "additionalProperties": false,
@@ -8367,7 +8385,7 @@
           },
           "action": {
             "type": "string",
-            "pattern": "^(start|cancel|attach_transaction|reevaluate_graph_clock|graph_(dispatch|observe|reconcile)_[0-9]{3}_[0-9]{6})$",
+            "pattern": "^(start|cancel|attach_transaction|close_steps|reevaluate_graph_clock|graph_(dispatch|observe|reconcile)_[0-9]{3}_[0-9]{6})$",
             "description": "Opaque operation telemetry. Clients transition from the returned run, ETag, and guidance rather than parsing this value."
           },
           "disposition": {

@@ -66,7 +66,7 @@ const implementationAckOutcome = {
 };
 
 test("generated SDK includes every current public operation", () => {
-  assert.equal(MODERNEDI_API_VERSION, "1.35.0");
+  assert.equal(MODERNEDI_API_VERSION, "1.36.0");
   assert.equal(OPENAPI_GENERATOR_VERSION, "7.24.0");
   assert.equal(GENERATED_OPERATION_IDS.length, 58);
   assert.equal(new Set(GENERATED_OPERATION_IDS).size, GENERATED_OPERATION_IDS.length);

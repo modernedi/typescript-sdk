@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * ModernEDI TypeScript SDK, generated from the ModernEDI Integration API
- * specification version 1.35.0 with OpenAPI Generator 7.24.0.
+ * specification version 1.36.0 with OpenAPI Generator 7.24.0.
  *
  * SPDX-License-Identifier: Apache-2.0
  * Do not edit this generated file manually.
@@ -72,6 +72,12 @@ export interface ScenarioGraphStep {
      * @memberof ScenarioGraphStep
      */
     attachable: boolean;
+    /**
+     * Present and true only when the server currently permits explicitly closing this step through advance.closeSteps. Omitted otherwise. Reaching max does not close an explicit stream.
+     * @type {boolean}
+     * @memberof ScenarioGraphStep
+     */
+    closable?: boolean;
     /**
      *
      * @type {ScenarioGraphStepOccurrence}
@@ -149,6 +155,7 @@ export function ScenarioGraphStepFromJSONTyped(json: any, ignoreDiscriminator: b
         'direction': json['direction'],
         'targetKind': json['targetKind'],
         'attachable': json['attachable'],
+        'closable': json['closable'] == null ? undefined : json['closable'],
         'occurrence': ScenarioGraphStepOccurrenceFromJSON(json['occurrence']),
         'observedOccurrences': new Set(json['observedOccurrences']),
         'occurrences': ((json['occurrences'] as Array<any>).map(ScenarioGraphOccurrenceFromJSON)),
@@ -173,6 +180,7 @@ export function ScenarioGraphStepToJSONTyped(value?: ScenarioGraphStep | null, i
         'direction': value['direction'],
         'targetKind': value['targetKind'],
         'attachable': value['attachable'],
+        'closable': value['closable'],
         'occurrence': ScenarioGraphStepOccurrenceToJSON(value['occurrence']),
         'observedOccurrences': Array.from(value['observedOccurrences'] as Set<any>),
         'occurrences': ((value['occurrences'] as Array<any>).map(ScenarioGraphOccurrenceToJSON)),

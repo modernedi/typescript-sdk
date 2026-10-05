@@ -2,23 +2,23 @@
 /* eslint-disable */
 /**
  * ModernEDI TypeScript SDK, generated from the ModernEDI Integration API
- * specification version 1.35.0 with OpenAPI Generator 7.24.0.
+ * specification version 1.36.0 with OpenAPI Generator 7.24.0.
  *
  * SPDX-License-Identifier: Apache-2.0
  * Do not edit this generated file manually.
  */
 
 import { mapValues } from '../runtime.js';
-import type { ConfigurationScenarioDefinitionValueOperand } from './ConfigurationScenarioDefinitionValueOperand.js';
+import type { ConfigurationScenarioDefinitionAssertionOperand } from './ConfigurationScenarioDefinitionAssertionOperand.js';
 import {
-    ConfigurationScenarioDefinitionValueOperandFromJSON,
-    ConfigurationScenarioDefinitionValueOperandFromJSONTyped,
-    ConfigurationScenarioDefinitionValueOperandToJSON,
-    ConfigurationScenarioDefinitionValueOperandToJSONTyped,
-} from './ConfigurationScenarioDefinitionValueOperand.js';
+    ConfigurationScenarioDefinitionAssertionOperandFromJSON,
+    ConfigurationScenarioDefinitionAssertionOperandFromJSONTyped,
+    ConfigurationScenarioDefinitionAssertionOperandToJSON,
+    ConfigurationScenarioDefinitionAssertionOperandToJSONTyped,
+} from './ConfigurationScenarioDefinitionAssertionOperand.js';
 
 /**
- * A fact rule that must hold for the run to pass. For example, exists can require every 810 invoice to expose invoiceTotal, sum_equal can compare shipped and invoiced totals, and monotonic can require successive 315 status timestamps to move forward. Binary operators require right; unary operators reject it.
+ * A fact rule that must hold for the run to pass. sum_equal compares overall totals. keyed_sum_equal instead sums decimal amounts per item key across occurrences, then requires identical keys and per-key totals on both sides. keyed_equal requires identical keys and consistent decimal values per key, including across repeated occurrences (useful for unit prices). Keyed comparisons wait for both steps to close before passing and require keyed_facts operands. Binary operators require right; unary operators reject it.
  * @export
  * @interface ConfigurationScenarioDefinitionAssertion
  */
@@ -37,16 +37,16 @@ export interface ConfigurationScenarioDefinitionAssertion {
     operator: ConfigurationScenarioDefinitionAssertionOperatorEnum;
     /**
      *
-     * @type {ConfigurationScenarioDefinitionValueOperand}
+     * @type {ConfigurationScenarioDefinitionAssertionOperand}
      * @memberof ConfigurationScenarioDefinitionAssertion
      */
-    left: ConfigurationScenarioDefinitionValueOperand;
+    left: ConfigurationScenarioDefinitionAssertionOperand;
     /**
      *
-     * @type {ConfigurationScenarioDefinitionValueOperand}
+     * @type {ConfigurationScenarioDefinitionAssertionOperand}
      * @memberof ConfigurationScenarioDefinitionAssertion
      */
-    right?: ConfigurationScenarioDefinitionValueOperand;
+    right?: ConfigurationScenarioDefinitionAssertionOperand;
 }
 
 
@@ -61,6 +61,8 @@ export const ConfigurationScenarioDefinitionAssertionOperatorEnum = {
     SameSet: 'same_set',
     Subset: 'subset',
     SumEqual: 'sum_equal',
+    KeyedSumEqual: 'keyed_sum_equal',
+    KeyedEqual: 'keyed_equal',
     LessThanOrEqual: 'less_than_or_equal',
     GreaterThanOrEqual: 'greater_than_or_equal',
     Monotonic: 'monotonic',
@@ -91,8 +93,8 @@ export function ConfigurationScenarioDefinitionAssertionFromJSONTyped(json: any,
 
         'id': json['id'],
         'operator': json['operator'],
-        'left': ConfigurationScenarioDefinitionValueOperandFromJSON(json['left']),
-        'right': json['right'] == null ? undefined : ConfigurationScenarioDefinitionValueOperandFromJSON(json['right']),
+        'left': ConfigurationScenarioDefinitionAssertionOperandFromJSON(json['left']),
+        'right': json['right'] == null ? undefined : ConfigurationScenarioDefinitionAssertionOperandFromJSON(json['right']),
     };
 }
 
@@ -109,7 +111,7 @@ export function ConfigurationScenarioDefinitionAssertionToJSONTyped(value?: Conf
 
         'id': value['id'],
         'operator': value['operator'],
-        'left': ConfigurationScenarioDefinitionValueOperandToJSON(value['left']),
-        'right': ConfigurationScenarioDefinitionValueOperandToJSON(value['right']),
+        'left': ConfigurationScenarioDefinitionAssertionOperandToJSON(value['left']),
+        'right': ConfigurationScenarioDefinitionAssertionOperandToJSON(value['right']),
     };
 }

@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * ModernEDI TypeScript SDK, generated from the ModernEDI Integration API
- * specification version 1.35.0 with OpenAPI Generator 7.24.0.
+ * specification version 1.36.0 with OpenAPI Generator 7.24.0.
  *
  * SPDX-License-Identifier: Apache-2.0
  * Do not edit this generated file manually.
@@ -16,13 +16,13 @@ import {
     ConfigurationVerificationIdentityToJSON,
     ConfigurationVerificationIdentityToJSONTyped,
 } from './ConfigurationVerificationIdentity.js';
-import type { ConfigurationVerificationCaseResult } from './ConfigurationVerificationCaseResult.js';
+import type { ConfigurationVerificationRunCasesInner } from './ConfigurationVerificationRunCasesInner.js';
 import {
-    ConfigurationVerificationCaseResultFromJSON,
-    ConfigurationVerificationCaseResultFromJSONTyped,
-    ConfigurationVerificationCaseResultToJSON,
-    ConfigurationVerificationCaseResultToJSONTyped,
-} from './ConfigurationVerificationCaseResult.js';
+    ConfigurationVerificationRunCasesInnerFromJSON,
+    ConfigurationVerificationRunCasesInnerFromJSONTyped,
+    ConfigurationVerificationRunCasesInnerToJSON,
+    ConfigurationVerificationRunCasesInnerToJSONTyped,
+} from './ConfigurationVerificationRunCasesInner.js';
 
 /**
  * Durable bounded suite. Results expire after 90 days; only the most recent 200 workspace runs are retained. Freshness is checked on reads.
@@ -37,7 +37,7 @@ export interface ConfigurationVerificationRun {
      */
     runId: string;
     /**
-     * PASSED covers only selected saved cases; it does not establish delivery, partner acceptance or scenario success.
+     * PASSED covers the selected mapping and offline conversation expectations; it does not establish delivery, partner acceptance or a successful live scenario run.
      * @type {ConfigurationVerificationRunStatusEnum}
      * @memberof ConfigurationVerificationRun
      */
@@ -68,10 +68,10 @@ export interface ConfigurationVerificationRun {
     identity: ConfigurationVerificationIdentity;
     /**
      * Completed case outcomes. Incomplete suites cannot pass.
-     * @type {Array<ConfigurationVerificationCaseResult>}
+     * @type {Array<ConfigurationVerificationRunCasesInner>}
      * @memberof ConfigurationVerificationRun
      */
-    cases: Array<ConfigurationVerificationCaseResult>;
+    cases: Array<ConfigurationVerificationRunCasesInner>;
     /**
      * Whether current workspace, evaluator and catalog still match this result.
      * @type {ConfigurationVerificationRunFreshnessEnum}
@@ -156,7 +156,7 @@ export function ConfigurationVerificationRunFromJSONTyped(json: any, ignoreDiscr
         'completedAt': json['completedAt'],
         'appliedOperationId': json['appliedOperationId'],
         'identity': ConfigurationVerificationIdentityFromJSON(json['identity']),
-        'cases': ((json['cases'] as Array<any>).map(ConfigurationVerificationCaseResultFromJSON)),
+        'cases': ((json['cases'] as Array<any>).map(ConfigurationVerificationRunCasesInnerFromJSON)),
         'freshness': json['freshness'],
         'staleReasons': json['staleReasons'],
     };
@@ -179,7 +179,7 @@ export function ConfigurationVerificationRunToJSONTyped(value?: ConfigurationVer
         'completedAt': value['completedAt'],
         'appliedOperationId': value['appliedOperationId'],
         'identity': ConfigurationVerificationIdentityToJSON(value['identity']),
-        'cases': ((value['cases'] as Array<any>).map(ConfigurationVerificationCaseResultToJSON)),
+        'cases': ((value['cases'] as Array<any>).map(ConfigurationVerificationRunCasesInnerToJSON)),
         'freshness': value['freshness'],
         'staleReasons': value['staleReasons'],
     };

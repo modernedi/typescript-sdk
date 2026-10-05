@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: ModernEDI Integration API
-  version: 1.35.0
+  version: 1.36.0
   termsOfService: https://www.modernedi.com/terms
   contact:
     name: ModernEDI Integration Support
@@ -329,8 +329,8 @@ paths:
       operationId: advanceScenarioRun
       tags:
         - Scenario runs
-      summary: Advance adapter work or reevaluate graph deadlines
-      description: 'Advances server-controlled adapter work or refreshes/re-evaluates the existing graph, using the same runtime as the browser. Every fresh external dispatch, including ModernEDI test-partner-originated traffic, additionally requires messages:write on the authenticated key. The same key is reused automatically; no second credential is accepted in the body. Reconciliation and observation-only evaluation need no send scope. retry.requiresApiKey describes the browser''s supplemental credential, not API authorization: false never exempts a dispatch from messages:write. A lost-response retry must reuse the original Idempotency-Key and If-Match. An already-recorded failed operation is replayed without another dispatch; to attempt a retryable failed action again, fetch the current ETag and use a fresh key. Follow structured guidance rather than hard-coding bundled step names.'
+      summary: Advance work, reevaluate deadlines, or explicitly close document collection
+      description: 'With an empty body, advances server-controlled adapter work or refreshes/re-evaluates the graph using the same runtime as the browser. Alternatively, closeSteps records irreversible no-more-documents decisions for the named explicit-closure steps, with exact occurrence counts, server time, and caller attribution. Only current steps marked closable may close. Closure and the resulting evaluation commit atomically; all quantity, deadline, and evidence checks still apply. It never sends EDI, requires no messages:write scope, and allows existing attachments to refresh pending evidence while the run remains active. Every fresh external dispatch, including ModernEDI test-partner-originated traffic, additionally requires messages:write on the authenticated key. The same key is reused automatically; no second credential is accepted in the body. Reconciliation and observation-only evaluation need no send scope. retry.requiresApiKey describes the browser''s supplemental credential, not API authorization: false never exempts a dispatch from messages:write. A lost-response retry must reuse the original Idempotency-Key and If-Match. An already-recorded failed operation is replayed without another dispatch; to attempt a retryable failed action again, fetch the current ETag and use a fresh key. Follow structured guidance rather than hard-coding bundled step names.'
       x-required-scope: scenario-runs:write
       security:
         - IntegrationApiKeyHeader: []
@@ -1150,7 +1150,7 @@ paths:
       description: |-
         **Required key scope:** `configuration:read`.
 
-        Optional and side-effect-free: re-plans the submitted bundle and verifies all saved mapping cases on the server. Supports up to 25 tested mappings and 100 cases in a 30-second suite. Uses the same incoming/JSLT/XSLT engines as Mapper reviews. Mappings without cases are counted explicitly. No raw input/output is retained. One active verification and 30 starts per workspace per hour are shared with browser reviews. Same requestId and identical content replay the persisted run. This endpoint never applies configuration or executes AS2/scenarios. A network interruption does not imply cancellation; GET the deterministic verify-{requestId} run before retrying.
+        Optional and side-effect-free: re-plans the submitted bundle and verifies saved mapping and binding-owned conversation cases on the server. Supports up to 25 tested mappings, 25 tested bindings and 100 combined cases in a 30-second suite. Uses the existing incoming/JSLT/XSLT engines, fact extraction and scenario interpreter. Conversation observations reference saved cases on their bound runtime maps; actual outgoing documents must pass X12 validation. Maps and bindings without cases are counted explicitly. No raw input/output or extracted values are retained. One active verification and 30 starts per workspace per hour are shared with browser reviews. Same requestId and identical content replay the persisted run. This endpoint never applies configuration, sends EDI, invokes adapters or creates live scenario/transport evidence. A network interruption does not imply cancellation; GET the deterministic verify-{requestId} run before retrying.
       security:
         - IntegrationApiKeyHeader: []
       responses:
@@ -6535,7 +6535,16 @@ components:
       type: object
       additionalProperties: false
       required: []
-      properties: {}
+      properties:
+        closeSteps:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items:
+            type: string
+            pattern: ^[A-Za-z][A-Za-z0-9_-]{0,127}$
+          description: Optional explicit no-more-documents decision. Only reachable open steps declared with closure.kind=explicit are eligible. Their exact attached counts and server time are recorded atomically with the result and actor-attributed operation. All business and evidence checks still apply; incomplete fulfillment can fail. New documents cannot be attached after closure, but existing observations can refresh pending evidence while the run remains active. This action never dispatches EDI and needs no messages:write scope or supplemental x-api-key. It cannot bypass an expired deadline. For an ambiguous response retry the same list, If-Match and Idempotency-Key.
     CancelScenarioRunRequest:
       type: object
       additionalProperties: false
@@ -7320,7 +7329,9 @@ components:
         - baseSnapshotEtag
         - evaluatorSha256
         - mappings
+        - scenarioBindings
         - untestedMappingCount
+        - untestedScenarioBindingCount
         - caseCount
       properties:
         planSha256:
@@ -7334,20 +7345,184 @@ components:
           $ref: '#/components/schemas/ConfigurationSha256'
         mappings:
           type: array
-          minItems: 1
+          minItems: 0
           maxItems: 25
           items:
             $ref: '#/components/schemas/ConfigurationVerificationMapping'
           description: All desired mappings containing saved cases, sorted by resource key.
+        scenarioBindings:
+          type: array
+          maxItems: 25
+          items:
+            $ref: '#/components/schemas/ConfigurationVerificationScenarioBinding'
+          description: Desired bindings with saved offline conversation tests. These tests use actual mapping-case documents and the scenario interpreter, without live delivery or acknowledgement evidence.
         untestedMappingCount:
           type: integer
           minimum: 0
           description: Desired mappings without saved cases. A passing suite does not cover these mappings.
+        untestedScenarioBindingCount:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: Desired scenario bindings without saved conversation tests. Null for historical runs that did not measure conversation coverage.
         caseCount:
           type: integer
           minimum: 1
           maximum: 100
           description: Total selected saved cases, including cases not reached before cancellation or timeout.
+    ConfigurationVerificationScenarioBinding:
+      type: object
+      additionalProperties: false
+      required:
+        - scenarioBindingResourceKey
+        - definitionSha256
+        - bindingSha256
+        - authoritySha256
+        - casesSha256
+        - caseCount
+        - steps
+      properties:
+        scenarioBindingResourceKey:
+          type: string
+          format: uuid
+          description: Stable portable ScenarioBinding resource key.
+        definitionSha256:
+          $ref: '#/components/schemas/ConfigurationSha256'
+        bindingSha256:
+          $ref: '#/components/schemas/ConfigurationSha256'
+        authoritySha256:
+          $ref: '#/components/schemas/ConfigurationSha256'
+        casesSha256:
+          $ref: '#/components/schemas/ConfigurationSha256'
+        caseCount:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Number of saved conversation tests selected from this binding.
+        steps:
+          type: array
+          maxItems: 500
+          items:
+            $ref: '#/components/schemas/ConfigurationVerificationScenarioStep'
+          description: Frozen X12 grammar for every bound step, including steps absent from an individual test.
+    ConfigurationVerificationScenarioStep:
+      type: object
+      additionalProperties: false
+      required:
+        - stepId
+        - syntaxTree
+      properties:
+        stepId:
+          type: string
+          description: Step in the scenario definition.
+        syntaxTree:
+          $ref: '#/components/schemas/ConfigurationVerificationSyntaxTree'
+    ConfigurationScenarioCaseCheck:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - outcome
+        - code
+      properties:
+        id:
+          type: string
+          maxLength: 1024
+          description: Stable interpreter check ID, such as assertion:invoiceCurrencyMatches.
+        outcome:
+          type: string
+          enum:
+            - PASSED
+            - FAILED
+            - PENDING
+            - INCONCLUSIVE
+          description: Actual outcome of the interpreter check, not the saved test's status.
+        code:
+          type: string
+          description: Interpreter result code, without fact values or document contents.
+    ConfigurationScenarioCaseResult:
+      type: object
+      additionalProperties: false
+      required:
+        - scenarioBindingResourceKey
+        - id
+        - name
+        - mode
+        - caseSha256
+        - expectedOutcome
+        - status
+        - actualOutcome
+        - actualChecksSha256
+        - diagnosticCode
+        - checkCount
+        - checks
+      properties:
+        scenarioBindingResourceKey:
+          type: string
+          format: uuid
+          description: Binding owning this saved conversation test.
+        id:
+          type: string
+          description: Portable case ID.
+        name:
+          type: string
+          description: Portable case display name.
+        mode:
+          type: string
+          enum:
+            - OFFLINE
+          description: No live run, EDI send, transport receipt, or partner acknowledgement is created.
+        caseSha256:
+          $ref: '#/components/schemas/ConfigurationSha256'
+        expectedOutcome:
+          type: string
+          enum:
+            - PASSED
+            - FAILED
+            - PENDING
+            - INCONCLUSIVE
+          description: Expected interpreter outcome. A negative test can pass by reproducing its named failing checks.
+        status:
+          type: string
+          enum:
+            - PASSED
+            - FAILED
+            - ERROR
+          description: Whether actual interpreter results match all saved expectations. Mapping or document evaluation errors never satisfy negative expectations.
+        actualOutcome:
+          type: string
+          nullable: true
+          enum:
+            - PASSED
+            - FAILED
+            - PENDING
+            - INCONCLUSIVE
+            - null
+          description: Actual offline interpreter outcome; null when evaluation could not run.
+        actualChecksSha256:
+          type: string
+          nullable: true
+          pattern: ^[a-f0-9]{64}$
+          description: Hash of all actual check IDs, outcomes, and codes; null on evaluation errors.
+        diagnosticCode:
+          type: string
+          nullable: true
+          enum:
+            - EXPECTED_RESULT_MISMATCH
+            - MAPPING_CASE_FAILED
+            - DOCUMENT_EVALUATION_FAILED
+            - null
+          description: Safe diagnostic category, or null when the saved test passed.
+        checkCount:
+          type: integer
+          minimum: 0
+          description: Total evaluated interpreter checks, including checks omitted from the bounded preview.
+        checks:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/ConfigurationScenarioCaseCheck'
+          description: Bounded preview, non-passing checks first. Contains no raw inputs, outputs, fact values, or engine error text.
     ConfigurationVerificationCaseResult:
       type: object
       additionalProperties: false
@@ -7413,7 +7588,7 @@ components:
           $ref: '#/components/schemas/ConfigurationVerificationRunId'
         status:
           type: string
-          description: PASSED covers only selected saved cases; it does not establish delivery, partner acceptance or scenario success.
+          description: PASSED covers the selected mapping and offline conversation expectations; it does not establish delivery, partner acceptance or a successful live scenario run.
           enum:
             - RUNNING
             - PASSED
@@ -7440,7 +7615,9 @@ components:
           type: array
           maxItems: 100
           items:
-            $ref: '#/components/schemas/ConfigurationVerificationCaseResult'
+            oneOf:
+              - $ref: '#/components/schemas/ConfigurationVerificationCaseResult'
+              - $ref: '#/components/schemas/ConfigurationScenarioCaseResult'
           description: Completed case outcomes. Incomplete suites cannot pass.
         freshness:
           type: string
@@ -14613,7 +14790,7 @@ components:
           pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$
         action:
           type: string
-          pattern: ^(start|cancel|attach_transaction|reevaluate_graph_clock|graph_(dispatch|observe|reconcile)_[0-9]{3}_[0-9]{6})$
+          pattern: ^(start|cancel|attach_transaction|close_steps|reevaluate_graph_clock|graph_(dispatch|observe|reconcile)_[0-9]{3}_[0-9]{6})$
           description: Opaque operation telemetry. Clients transition from the returned run, ETag, and guidance rather than parsing this value.
         disposition:
           enum:
@@ -14850,6 +15027,11 @@ components:
         attachable:
           type: boolean
           description: True only for runtime_mapping and observation_only targets. Adapter steps are advanced through /advance.
+        closable:
+          enum:
+            - true
+          type: boolean
+          description: Present and true only when the server currently permits explicitly closing this step through advance.closeSteps. Omitted otherwise. Reaching max does not close an explicit stream.
         occurrence:
           type: object
           additionalProperties: false
@@ -15901,7 +16083,7 @@ components:
           description: Scenario-specific semantic role, such as purchase_order, shipment_notice, or ocean_status. It is intentionally more precise than the transaction-set code.
     ConfigurationScenarioDefinitionOccurrenceClosure:
       title: Occurrence closure
-      description: The objective rule that tells a run no more documents are expected for one repeated step. fixed closes at the required fixed count; max_reached closes only at the authored maximum; expected_count closes at a required or defaulted run parameter, including an explicit zero. Branch selection supplies the no-document outcome for an unselected destination. There is no manual-close operation in v1.
+      description: 'The rule that tells a run no more documents will be attached to a step. fixed closes at the fixed count; max_reached closes at the maximum; expected_count uses a required or defaulted count parameter. explicit waits for an authorized browser or API decision, even at max: advance with closeSteps records the exact attached count and time, then evaluates all existing checks. Closing does not assert success, reopen the step, or send EDI. An explicit min-zero step can close with no documents. Existing attachments may still refresh pending evidence while the run is active. A new run is required for additional documents after closure. Branch selection supplies the no-document outcome for an unselected destination.'
       oneOf:
         - title: Fixed closure
           type: object
@@ -15925,6 +16107,17 @@ components:
                 - max_reached
               type: string
               description: 'Close only when the declared maximum count is observed. Example: a 315 status step with max=2 closes after the second status document.'
+        - title: Explicit closure
+          type: object
+          additionalProperties: false
+          required:
+            - kind
+          properties:
+            kind:
+              enum:
+                - explicit
+              type: string
+              description: Wait for an explicit no-more-documents decision through the browser or advance API closeSteps field. The maximum is a safety limit, not an expected final count. Quantity equality alone never closes the step.
         - title: Expected-count closure
           type: object
           additionalProperties: false
@@ -15952,7 +16145,7 @@ components:
           type: integer
           minimum: 0
           maximum: 1000
-          description: Minimum accepted count once a reachable step closes. Zero is a no-document outcome only when expected_count resolves to 0 or branch selection makes the step unreachable; zero alone does not close a stream.
+          description: Minimum accepted count once a reachable step closes. Zero permits a no-document outcome when expected_count resolves to 0, explicit closure records no documents, or branch selection makes the step unreachable; zero alone does not close a stream.
         max:
           type: integer
           minimum: 1
@@ -15960,7 +16153,7 @@ components:
           description: Structural per-step ceiling for authored occurrences. Validate and Apply also enforce one conservative run-state capacity budget across all steps, paired documents, checks, and durable evidence.
         closure:
           $ref: '#/components/schemas/ConfigurationScenarioDefinitionOccurrenceClosure'
-          description: 'The closure rule: the objective signal that no more documents are expected for this step. It may be omitted while authoring; Publish writes fixed when min equals max and max_reached otherwise. Because max_reached waits for the maximum, a min-zero unbranched step must instead use expected_count so a zero-document outcome is explicit.'
+          description: 'The closure rule: the signal that no more documents are expected for this step. It may be omitted while authoring; Publish writes fixed when min equals max and max_reached otherwise. Because max_reached waits for the maximum, a min-zero unbranched step must instead use expected_count or explicit so a zero-document outcome is deliberate.'
     ConfigurationScenarioDefinitionPositiveDuration:
       type: string
       format: duration
@@ -16571,9 +16764,39 @@ components:
         effect:
           $ref: '#/components/schemas/ConfigurationScenarioDefinitionRevisionEffect'
           description: Required effective-time and downstream behavior for supersedes and cancels. Forbidden for follows.
+    ConfigurationScenarioDefinitionKeyedFactOperand:
+      title: Keyed fact operand
+      description: 'Conversation assertion input: align the required string-list keyFact and required decimal-list fact by index within each effective occurrence of stepId. List lengths must agree. Keys must be nonblank and unique within each occurrence; the same key may recur in later documents. Both the keys and values retain source evidence. No projection or parameter is accepted. This does not combine quantities in different units: include unit in your Mapper-produced key. Keyed operators are not available in branch predicates, correlations, or revision timestamps.'
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - stepId
+        - keyFact
+        - fact
+      properties:
+        kind:
+          enum:
+            - keyed_facts
+          type: string
+        stepId:
+          $ref: '#/components/schemas/ConfigurationScenarioDefinitionToken'
+        keyFact:
+          $ref: '#/components/schemas/ConfigurationScenarioDefinitionToken'
+          description: Required list of string keys on this step.
+        fact:
+          $ref: '#/components/schemas/ConfigurationScenarioDefinitionToken'
+          description: Required list of decimal values aligned with keyFact on this step.
+    ConfigurationScenarioDefinitionAssertionOperand:
+      title: Assertion operand
+      oneOf:
+        - $ref: '#/components/schemas/ConfigurationScenarioDefinitionFactOperand'
+        - $ref: '#/components/schemas/ConfigurationScenarioDefinitionParameterOperand'
+        - $ref: '#/components/schemas/ConfigurationScenarioDefinitionLiteralOperand'
+        - $ref: '#/components/schemas/ConfigurationScenarioDefinitionKeyedFactOperand'
     ConfigurationScenarioDefinitionAssertion:
       title: Assertion
-      description: A fact rule that must hold for the run to pass. For example, exists can require every 810 invoice to expose invoiceTotal, sum_equal can compare shipped and invoiced totals, and monotonic can require successive 315 status timestamps to move forward. Binary operators require right; unary operators reject it.
+      description: A fact rule that must hold for the run to pass. sum_equal compares overall totals. keyed_sum_equal instead sums decimal amounts per item key across occurrences, then requires identical keys and per-key totals on both sides. keyed_equal requires identical keys and consistent decimal values per key, including across repeated occurrences (useful for unit prices). Keyed comparisons wait for both steps to close before passing and require keyed_facts operands. Binary operators require right; unary operators reject it.
       type: object
       additionalProperties: false
       required:
@@ -16593,13 +16816,15 @@ components:
             - same_set
             - subset
             - sum_equal
+            - keyed_sum_equal
+            - keyed_equal
             - less_than_or_equal
             - greater_than_or_equal
             - monotonic
         left:
-          $ref: '#/components/schemas/ConfigurationScenarioDefinitionValueOperand'
+          $ref: '#/components/schemas/ConfigurationScenarioDefinitionAssertionOperand'
         right:
-          $ref: '#/components/schemas/ConfigurationScenarioDefinitionValueOperand'
+          $ref: '#/components/schemas/ConfigurationScenarioDefinitionAssertionOperand'
     ConfigurationScenarioDefinitionParameter:
       title: Prepared run parameter
       description: A typed value supplied when a run starts through the Workspace UI or API, or resolved from its declared default when optional.
@@ -16691,7 +16916,7 @@ components:
           description: Conditions may use parameters, literals, or facts from the alternatives' shared fromStep. They cannot read a destination step to select that destination.
     ConfigurationScenarioDefinitionBranch:
       title: Explicit branch
-      description: 'A choice between mutually exclusive next-document paths after a named checkpoint. The checkpoint must be emitted by the alternatives'' shared source step, so the decision precedes every controlled destination. The emitter must also necessarily observe at least one document; expected_count closure with occurrence min 0 cannot emit a branch checkpoint. All alternatives leave the same source step. Example: after a 301 booking confirmation emits bookingDisposition, choose the 303 cancellation path when cancelRequested=true; otherwise choose 304 shipping instructions. exactly_one must choose one path and therefore requires an otherwise fallback. at_most_one may choose no path. A round evaluates only evidence already available when that round began; its selection can make later steps available in the next round.'
+      description: 'A choice between mutually exclusive next-document paths after a named checkpoint. The checkpoint must be emitted by the alternatives'' shared source step, so the decision precedes every controlled destination. The emitter must also necessarily observe at least one document; expected_count or explicit closure with occurrence min 0 cannot emit a branch checkpoint. All alternatives leave the same source step. Example: after a 301 booking confirmation emits bookingDisposition, choose the 303 cancellation path when cancelRequested=true; otherwise choose 304 shipping instructions. exactly_one must choose one path and therefore requires an otherwise fallback. at_most_one may choose no path. A round evaluates only evidence already available when that round began; its selection can make later steps available in the next round.'
       type: object
       additionalProperties: false
       required:
@@ -16796,6 +17021,122 @@ components:
           maxLength: 160
           pattern: \S
           description: Human-readable binding name. The server trims leading and trailing whitespace when canonicalizing.
+    ConfigurationScenarioBindingTestSeconds:
+      type: integer
+      minimum: 0
+      maximum: 31536000
+      description: Whole seconds after the synthetic start (at most 365 days).
+    ConfigurationScenarioBindingRegressionObservation:
+      title: Saved mapping-case observation
+      type: object
+      additionalProperties: false
+      required:
+        - stepId
+        - mappingCaseId
+        - observedAfterSeconds
+      properties:
+        stepId:
+          $ref: '#/components/schemas/ConfigurationScenarioBindingToken'
+        mappingCaseId:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: \S
+          description: ID of a saved case belonging to this step's bound runtime mapping. Incoming observations use that case's selected X12 transaction; outgoing observations use the actual generated output, never expectedOutput.
+        observedAfterSeconds:
+          $ref: '#/components/schemas/ConfigurationScenarioBindingTestSeconds'
+    ConfigurationScenarioBindingRegressionOutcome:
+      type: string
+      enum:
+        - PASSED
+        - FAILED
+        - PENDING
+        - INCONCLUSIVE
+    ConfigurationScenarioBindingRegressionExpected:
+      title: Expected conversation result
+      description: A FAILED expectation must include at least one specific FAILED check, preventing an unrelated failure from satisfying a negative test.
+      type: object
+      additionalProperties: false
+      required:
+        - outcome
+        - checks
+      properties:
+        outcome:
+          $ref: '#/components/schemas/ConfigurationScenarioBindingRegressionOutcome'
+        checks:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - id
+              - outcome
+              - code
+            properties:
+              id:
+                type: string
+                minLength: 1
+                maxLength: 1024
+                pattern: \S
+              outcome:
+                $ref: '#/components/schemas/ConfigurationScenarioBindingRegressionOutcome'
+              code:
+                type: string
+                minLength: 1
+                maxLength: 128
+                pattern: \S
+    ConfigurationScenarioBindingRegressionCase:
+      title: Saved conversation case
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - parameters
+        - observations
+        - evaluatedAfterSeconds
+        - closeSteps
+        - expected
+      properties:
+        id:
+          type: string
+          pattern: ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: \S
+        parameters:
+          type: object
+          additionalProperties: false
+          maxProperties: 100
+          description: Ordinary run parameters, resolved and type-checked against this exact definition.
+        observations:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ConfigurationScenarioBindingRegressionObservation'
+          description: Listed attachment order. Repeated step IDs are assigned occurrence 1, 2, and so on. No sorting by business event time occurs.
+        evaluatedAfterSeconds:
+          $ref: '#/components/schemas/ConfigurationScenarioBindingTestSeconds'
+          description: Evaluation time relative to a fixed synthetic UTC start. Must not precede any observation.
+        closeSteps:
+          type: array
+          maxItems: 100
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/ConfigurationScenarioBindingToken'
+          description: Explicit-completion steps to close at the evaluation time. Closing never waives their checks.
+        expected:
+          $ref: '#/components/schemas/ConfigurationScenarioBindingRegressionExpected'
+    ConfigurationScenarioBindingRegressionCases:
+      title: Saved conversation tests
+      description: Optional offline tests for this binding. Each observation references a saved case on the step's bound runtime mapping. Tests execute proposed maps and the existing graph interpreter without sending EDI or creating live run evidence. Case order is canonicalized by ID; observation order is preserved. Up to 10 cases, 20 observations each, and 64 KiB total.
+      type: array
+      maxItems: 10
+      items:
+        $ref: '#/components/schemas/ConfigurationScenarioBindingRegressionCase'
     ConfigurationScenarioBindingNamespace:
       type: string
       maxLength: 253
@@ -17018,6 +17359,8 @@ components:
         - actors
         - steps
       properties:
+        regressionCases:
+          $ref: '#/components/schemas/ConfigurationScenarioBindingRegressionCases'
         definition:
           $ref: '#/components/schemas/ConfigurationScenarioBindingDefinitionReference'
         environment:

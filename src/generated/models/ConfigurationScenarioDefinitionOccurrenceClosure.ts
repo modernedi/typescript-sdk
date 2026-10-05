@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * ModernEDI TypeScript SDK, generated from the ModernEDI Integration API
- * specification version 1.35.0 with OpenAPI Generator 7.24.0.
+ * specification version 1.36.0 with OpenAPI Generator 7.24.0.
  *
  * SPDX-License-Identifier: Apache-2.0
  * Do not edit this generated file manually.
@@ -15,6 +15,13 @@ import {
     ExpectedCountClosureFromJSONTyped,
     ExpectedCountClosureToJSON,
 } from './ExpectedCountClosure.js';
+import type { ExplicitClosure } from './ExplicitClosure.js';
+import {
+    instanceOfExplicitClosure,
+    ExplicitClosureFromJSON,
+    ExplicitClosureFromJSONTyped,
+    ExplicitClosureToJSON,
+} from './ExplicitClosure.js';
 import type { FixedClosure } from './FixedClosure.js';
 import {
     instanceOfFixedClosure,
@@ -32,10 +39,10 @@ import {
 
 /**
  * @type ConfigurationScenarioDefinitionOccurrenceClosure
- * The objective rule that tells a run no more documents are expected for one repeated step. fixed closes at the required fixed count; max_reached closes only at the authored maximum; expected_count closes at a required or defaulted run parameter, including an explicit zero. Branch selection supplies the no-document outcome for an unselected destination. There is no manual-close operation in v1.
+ * The rule that tells a run no more documents will be attached to a step. fixed closes at the fixed count; max_reached closes at the maximum; expected_count uses a required or defaulted count parameter. explicit waits for an authorized browser or API decision, even at max: advance with closeSteps records the exact attached count and time, then evaluates all existing checks. Closing does not assert success, reopen the step, or send EDI. An explicit min-zero step can close with no documents. Existing attachments may still refresh pending evidence while the run is active. A new run is required for additional documents after closure. Branch selection supplies the no-document outcome for an unselected destination.
  * @export
  */
-export type ConfigurationScenarioDefinitionOccurrenceClosure = ExpectedCountClosure | FixedClosure | MaximumReachedClosure;
+export type ConfigurationScenarioDefinitionOccurrenceClosure = ExpectedCountClosure | ExplicitClosure | FixedClosure | MaximumReachedClosure;
 
 export function ConfigurationScenarioDefinitionOccurrenceClosureFromJSON(json: any): ConfigurationScenarioDefinitionOccurrenceClosure {
     return ConfigurationScenarioDefinitionOccurrenceClosureFromJSONTyped(json, false);
@@ -50,6 +57,9 @@ export function ConfigurationScenarioDefinitionOccurrenceClosureFromJSONTyped(js
     }
     if (instanceOfExpectedCountClosure(json)) {
         return ExpectedCountClosureFromJSONTyped(json, true);
+    }
+    if (instanceOfExplicitClosure(json)) {
+        return ExplicitClosureFromJSONTyped(json, true);
     }
     if (instanceOfFixedClosure(json)) {
         return FixedClosureFromJSONTyped(json, true);
@@ -73,6 +83,9 @@ export function ConfigurationScenarioDefinitionOccurrenceClosureToJSONTyped(valu
     }
     if (instanceOfExpectedCountClosure(value)) {
         return ExpectedCountClosureToJSON(value as ExpectedCountClosure);
+    }
+    if (instanceOfExplicitClosure(value)) {
+        return ExplicitClosureToJSON(value as ExplicitClosure);
     }
     if (instanceOfFixedClosure(value)) {
         return FixedClosureToJSON(value as FixedClosure);

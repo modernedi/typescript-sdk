@@ -105,7 +105,7 @@ test('scenario lifecycle carries one credential, exact revisions, encoded paths,
   const raw = await client.scenarioRuns.startScenarioRunRaw({ idempotencyKey: 'start-exact', startScenarioRunRequest: selection });
   assert.equal(getModernEdiResponseMetadata(raw.raw).location, `/v1/scenario-runs/${start.run.id}`);
   assert.equal((await raw.value()).run.environment, 'test');
-  await client.scenarioRuns.advanceScenarioRun({ runId: 'id/with#reserved', idempotencyKey: 'advance-exact', ifMatch: start.run.etag, body: {} });
+  await client.scenarioRuns.advanceScenarioRun({ runId: 'id/with#reserved', idempotencyKey: 'advance-exact', ifMatch: start.run.etag, advanceScenarioRunRequest: {} });
   await client.scenarioRuns.attachScenarioRunObservation({ runId: start.run.id, idempotencyKey: 'attach-exact', ifMatch: start.run.etag,
     scenarioRunObservationRequest: { stepId: 'purchaseOrder', occurrence: 1, messageId: '<order@example>', transactionKey: '1#0001' } });
   await client.scenarioRuns.cancelScenarioRun({ runId: start.run.id, idempotencyKey: 'cancel-exact', ifMatch: start.run.etag, body: {} });
@@ -121,6 +121,11 @@ test('scenario lifecycle carries one credential, exact revisions, encoded paths,
   }
   assert.deepEqual(JSON.parse(captured[0].body), selection);
   assert.deepEqual(JSON.parse(captured[1].body), {});
+  await client.scenarioRuns.advanceScenarioRun({ runId: start.run.id, idempotencyKey: 'close-exact',
+    ifMatch: start.run.etag, advanceScenarioRunRequest: { closeSteps: new Set(['advanceShipNotice', 'invoice']) } });
+  assert.deepEqual(JSON.parse(captured.at(-1).body), { closeSteps: ['advanceShipNotice', 'invoice'] });
+  assert.equal(new Headers(captured.at(-1).headers).get('Idempotency-Key'), 'close-exact');
+  assert.equal(new Headers(captured.at(-1).headers).get('x-api-key'), 'test-only-secret');
 });
 
 test('timeline preserves member and API attribution and exposes the standard scope-denial envelope', async () => {
@@ -132,6 +137,6 @@ test('timeline preserves member and API attribution and exposes the standard sco
   const client = new ModernEdiClient({ bearerToken: 'test-only-key', fetch: async () => Response.json({ success: false,
     error: { code: 'insufficient_scope', message: 'Sending requires messages:write.', retryable: false, requestId: 'ci-test', details: {} },
   }, { status: 403, headers: { 'X-Request-Id': 'ci-test' } }) });
-  await assert.rejects(client.scenarioRuns.advanceScenarioRun({ runId: 'run-test', idempotencyKey: 'request', ifMatch: '"etag"', body: {} }),
+  await assert.rejects(client.scenarioRuns.advanceScenarioRun({ runId: 'run-test', idempotencyKey: 'request', ifMatch: '"etag"', advanceScenarioRunRequest: {} }),
     (error) => error instanceof ModernEdiApiError && error.code === 'insufficient_scope');
 });

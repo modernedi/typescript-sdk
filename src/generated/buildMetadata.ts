@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Do not edit this generated file manually.
  */
-export const MODERNEDI_API_VERSION = "1.35.0";
+export const MODERNEDI_API_VERSION = "1.36.0";
 export const OPENAPI_GENERATOR_VERSION = "7.24.0";
-export const OPENAPI_SPECIFICATION_SHA256 = "709e5ca22a9f457388219f2d8e532a2fa649c43d6a4fb742aca0c271b938ff3b";
+export const OPENAPI_SPECIFICATION_SHA256 = "47ca6897dbe23c36d3f2eb9f6c4d3e0ee3d16f67c06c6948db32e5136e1eb151";
 export const GENERATED_OPERATION_IDS = [
   "listScenarioRuns",
   "startScenarioRun",

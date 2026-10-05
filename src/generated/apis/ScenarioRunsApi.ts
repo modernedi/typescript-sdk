@@ -2,13 +2,18 @@
 /* eslint-disable */
 /**
  * ModernEDI TypeScript SDK, generated from the ModernEDI Integration API
- * specification version 1.35.0 with OpenAPI Generator 7.24.0.
+ * specification version 1.36.0 with OpenAPI Generator 7.24.0.
  *
  * SPDX-License-Identifier: Apache-2.0
  * Do not edit this generated file manually.
  */
 
 import * as runtime from '../runtime.js';
+import {
+    type AdvanceScenarioRunRequest,
+    AdvanceScenarioRunRequestFromJSON,
+    AdvanceScenarioRunRequestToJSON,
+} from '../models/AdvanceScenarioRunRequest.js';
 import {
     type ErrorResponse,
     ErrorResponseFromJSON,
@@ -50,11 +55,11 @@ import {
     StartScenarioRunRequestToJSON,
 } from '../models/StartScenarioRunRequest.js';
 
-export interface AdvanceScenarioRunRequest {
+export interface AdvanceScenarioRunOperationRequest {
     runId: string;
     idempotencyKey: string;
     ifMatch: string;
-    body: object;
+    advanceScenarioRunRequest: AdvanceScenarioRunRequest;
 }
 
 export interface AttachScenarioRunObservationRequest {
@@ -107,30 +112,30 @@ export interface ScenarioRunsApiInterface {
      * @param {string} runId Durable scenario run identifier.
      * @param {string} idempotencyKey Required command identity. Replays require byte-equivalent normalized input.
      * @param {string} ifMatch Current strong run-revision ETag returned in the run body or ETag response header.
-     * @param {object} body
+     * @param {AdvanceScenarioRunRequest} advanceScenarioRunRequest
      * @throws {RequiredError}
      * @memberof ScenarioRunsApiInterface
      */
-    advanceScenarioRunRequestOpts(requestParameters: AdvanceScenarioRunRequest): Promise<runtime.RequestOpts>;
+    advanceScenarioRunRequestOpts(requestParameters: AdvanceScenarioRunOperationRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * Advances server-controlled adapter work or refreshes/re-evaluates the existing graph, using the same runtime as the browser. Every fresh external dispatch, including ModernEDI test-partner-originated traffic, additionally requires messages:write on the authenticated key. The same key is reused automatically; no second credential is accepted in the body. Reconciliation and observation-only evaluation need no send scope. retry.requiresApiKey describes the browser\'s supplemental credential, not API authorization: false never exempts a dispatch from messages:write. A lost-response retry must reuse the original Idempotency-Key and If-Match. An already-recorded failed operation is replayed without another dispatch; to attempt a retryable failed action again, fetch the current ETag and use a fresh key. Follow structured guidance rather than hard-coding bundled step names.
-     * @summary Advance adapter work or reevaluate graph deadlines
+     * With an empty body, advances server-controlled adapter work or refreshes/re-evaluates the graph using the same runtime as the browser. Alternatively, closeSteps records irreversible no-more-documents decisions for the named explicit-closure steps, with exact occurrence counts, server time, and caller attribution. Only current steps marked closable may close. Closure and the resulting evaluation commit atomically; all quantity, deadline, and evidence checks still apply. It never sends EDI, requires no messages:write scope, and allows existing attachments to refresh pending evidence while the run remains active. Every fresh external dispatch, including ModernEDI test-partner-originated traffic, additionally requires messages:write on the authenticated key. The same key is reused automatically; no second credential is accepted in the body. Reconciliation and observation-only evaluation need no send scope. retry.requiresApiKey describes the browser\'s supplemental credential, not API authorization: false never exempts a dispatch from messages:write. A lost-response retry must reuse the original Idempotency-Key and If-Match. An already-recorded failed operation is replayed without another dispatch; to attempt a retryable failed action again, fetch the current ETag and use a fresh key. Follow structured guidance rather than hard-coding bundled step names.
+     * @summary Advance work, reevaluate deadlines, or explicitly close document collection
      * @param {string} runId Durable scenario run identifier.
      * @param {string} idempotencyKey Required command identity. Replays require byte-equivalent normalized input.
      * @param {string} ifMatch Current strong run-revision ETag returned in the run body or ETag response header.
-     * @param {object} body
+     * @param {AdvanceScenarioRunRequest} advanceScenarioRunRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof ScenarioRunsApiInterface
      */
-    advanceScenarioRunRaw(requestParameters: AdvanceScenarioRunRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ScenarioRunCommandResponse>>;
+    advanceScenarioRunRaw(requestParameters: AdvanceScenarioRunOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ScenarioRunCommandResponse>>;
 
     /**
-     * Advances server-controlled adapter work or refreshes/re-evaluates the existing graph, using the same runtime as the browser. Every fresh external dispatch, including ModernEDI test-partner-originated traffic, additionally requires messages:write on the authenticated key. The same key is reused automatically; no second credential is accepted in the body. Reconciliation and observation-only evaluation need no send scope. retry.requiresApiKey describes the browser\'s supplemental credential, not API authorization: false never exempts a dispatch from messages:write. A lost-response retry must reuse the original Idempotency-Key and If-Match. An already-recorded failed operation is replayed without another dispatch; to attempt a retryable failed action again, fetch the current ETag and use a fresh key. Follow structured guidance rather than hard-coding bundled step names.
-     * Advance adapter work or reevaluate graph deadlines
+     * With an empty body, advances server-controlled adapter work or refreshes/re-evaluates the graph using the same runtime as the browser. Alternatively, closeSteps records irreversible no-more-documents decisions for the named explicit-closure steps, with exact occurrence counts, server time, and caller attribution. Only current steps marked closable may close. Closure and the resulting evaluation commit atomically; all quantity, deadline, and evidence checks still apply. It never sends EDI, requires no messages:write scope, and allows existing attachments to refresh pending evidence while the run remains active. Every fresh external dispatch, including ModernEDI test-partner-originated traffic, additionally requires messages:write on the authenticated key. The same key is reused automatically; no second credential is accepted in the body. Reconciliation and observation-only evaluation need no send scope. retry.requiresApiKey describes the browser\'s supplemental credential, not API authorization: false never exempts a dispatch from messages:write. A lost-response retry must reuse the original Idempotency-Key and If-Match. An already-recorded failed operation is replayed without another dispatch; to attempt a retryable failed action again, fetch the current ETag and use a fresh key. Follow structured guidance rather than hard-coding bundled step names.
+     * Advance work, reevaluate deadlines, or explicitly close document collection
      */
-    advanceScenarioRun(requestParameters: AdvanceScenarioRunRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ScenarioRunCommandResponse>;
+    advanceScenarioRun(requestParameters: AdvanceScenarioRunOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ScenarioRunCommandResponse>;
 
     /**
      * Creates request options for attachScenarioRunObservation without sending the request
@@ -330,7 +335,7 @@ export class ScenarioRunsApi extends runtime.BaseAPI implements ScenarioRunsApiI
     /**
      * Creates request options for advanceScenarioRun without sending the request
      */
-    async advanceScenarioRunRequestOpts(requestParameters: AdvanceScenarioRunRequest): Promise<runtime.RequestOpts> {
+    async advanceScenarioRunRequestOpts(requestParameters: AdvanceScenarioRunOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['runId'] == null) {
             throw new runtime.RequiredError(
                 'runId',
@@ -352,10 +357,10 @@ export class ScenarioRunsApi extends runtime.BaseAPI implements ScenarioRunsApiI
             );
         }
 
-        if (requestParameters['body'] == null) {
+        if (requestParameters['advanceScenarioRunRequest'] == null) {
             throw new runtime.RequiredError(
-                'body',
-                'Required parameter "body" was null or undefined when calling advanceScenarioRun().'
+                'advanceScenarioRunRequest',
+                'Required parameter "advanceScenarioRunRequest" was null or undefined when calling advanceScenarioRun().'
             );
         }
 
@@ -394,15 +399,15 @@ export class ScenarioRunsApi extends runtime.BaseAPI implements ScenarioRunsApiI
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: requestParameters['body'] as any,
+            body: AdvanceScenarioRunRequestToJSON(requestParameters['advanceScenarioRunRequest']),
         };
     }
 
     /**
-     * Advances server-controlled adapter work or refreshes/re-evaluates the existing graph, using the same runtime as the browser. Every fresh external dispatch, including ModernEDI test-partner-originated traffic, additionally requires messages:write on the authenticated key. The same key is reused automatically; no second credential is accepted in the body. Reconciliation and observation-only evaluation need no send scope. retry.requiresApiKey describes the browser\'s supplemental credential, not API authorization: false never exempts a dispatch from messages:write. A lost-response retry must reuse the original Idempotency-Key and If-Match. An already-recorded failed operation is replayed without another dispatch; to attempt a retryable failed action again, fetch the current ETag and use a fresh key. Follow structured guidance rather than hard-coding bundled step names.
-     * Advance adapter work or reevaluate graph deadlines
+     * With an empty body, advances server-controlled adapter work or refreshes/re-evaluates the graph using the same runtime as the browser. Alternatively, closeSteps records irreversible no-more-documents decisions for the named explicit-closure steps, with exact occurrence counts, server time, and caller attribution. Only current steps marked closable may close. Closure and the resulting evaluation commit atomically; all quantity, deadline, and evidence checks still apply. It never sends EDI, requires no messages:write scope, and allows existing attachments to refresh pending evidence while the run remains active. Every fresh external dispatch, including ModernEDI test-partner-originated traffic, additionally requires messages:write on the authenticated key. The same key is reused automatically; no second credential is accepted in the body. Reconciliation and observation-only evaluation need no send scope. retry.requiresApiKey describes the browser\'s supplemental credential, not API authorization: false never exempts a dispatch from messages:write. A lost-response retry must reuse the original Idempotency-Key and If-Match. An already-recorded failed operation is replayed without another dispatch; to attempt a retryable failed action again, fetch the current ETag and use a fresh key. Follow structured guidance rather than hard-coding bundled step names.
+     * Advance work, reevaluate deadlines, or explicitly close document collection
      */
-    async advanceScenarioRunRaw(requestParameters: AdvanceScenarioRunRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ScenarioRunCommandResponse>> {
+    async advanceScenarioRunRaw(requestParameters: AdvanceScenarioRunOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ScenarioRunCommandResponse>> {
         const requestOptions = await this.advanceScenarioRunRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -410,10 +415,10 @@ export class ScenarioRunsApi extends runtime.BaseAPI implements ScenarioRunsApiI
     }
 
     /**
-     * Advances server-controlled adapter work or refreshes/re-evaluates the existing graph, using the same runtime as the browser. Every fresh external dispatch, including ModernEDI test-partner-originated traffic, additionally requires messages:write on the authenticated key. The same key is reused automatically; no second credential is accepted in the body. Reconciliation and observation-only evaluation need no send scope. retry.requiresApiKey describes the browser\'s supplemental credential, not API authorization: false never exempts a dispatch from messages:write. A lost-response retry must reuse the original Idempotency-Key and If-Match. An already-recorded failed operation is replayed without another dispatch; to attempt a retryable failed action again, fetch the current ETag and use a fresh key. Follow structured guidance rather than hard-coding bundled step names.
-     * Advance adapter work or reevaluate graph deadlines
+     * With an empty body, advances server-controlled adapter work or refreshes/re-evaluates the graph using the same runtime as the browser. Alternatively, closeSteps records irreversible no-more-documents decisions for the named explicit-closure steps, with exact occurrence counts, server time, and caller attribution. Only current steps marked closable may close. Closure and the resulting evaluation commit atomically; all quantity, deadline, and evidence checks still apply. It never sends EDI, requires no messages:write scope, and allows existing attachments to refresh pending evidence while the run remains active. Every fresh external dispatch, including ModernEDI test-partner-originated traffic, additionally requires messages:write on the authenticated key. The same key is reused automatically; no second credential is accepted in the body. Reconciliation and observation-only evaluation need no send scope. retry.requiresApiKey describes the browser\'s supplemental credential, not API authorization: false never exempts a dispatch from messages:write. A lost-response retry must reuse the original Idempotency-Key and If-Match. An already-recorded failed operation is replayed without another dispatch; to attempt a retryable failed action again, fetch the current ETag and use a fresh key. Follow structured guidance rather than hard-coding bundled step names.
+     * Advance work, reevaluate deadlines, or explicitly close document collection
      */
-    async advanceScenarioRun(requestParameters: AdvanceScenarioRunRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ScenarioRunCommandResponse> {
+    async advanceScenarioRun(requestParameters: AdvanceScenarioRunOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ScenarioRunCommandResponse> {
         const response = await this.advanceScenarioRunRaw(requestParameters, initOverrides);
         return await response.value();
     }

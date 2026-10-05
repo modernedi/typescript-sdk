@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * ModernEDI TypeScript SDK, generated from the ModernEDI Integration API
- * specification version 1.35.0 with OpenAPI Generator 7.24.0.
+ * specification version 1.36.0 with OpenAPI Generator 7.24.0.
  *
  * SPDX-License-Identifier: Apache-2.0
  * Do not edit this generated file manually.
@@ -24,7 +24,7 @@ import {
  */
 export interface ConfigurationScenarioDefinitionOccurrence {
     /**
-     * Minimum accepted count once a reachable step closes. Zero is a no-document outcome only when expected_count resolves to 0 or branch selection makes the step unreachable; zero alone does not close a stream.
+     * Minimum accepted count once a reachable step closes. Zero permits a no-document outcome when expected_count resolves to 0, explicit closure records no documents, or branch selection makes the step unreachable; zero alone does not close a stream.
      * @type {number}
      * @memberof ConfigurationScenarioDefinitionOccurrence
      */

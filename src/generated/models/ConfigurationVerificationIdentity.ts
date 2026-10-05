@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * ModernEDI TypeScript SDK, generated from the ModernEDI Integration API
- * specification version 1.35.0 with OpenAPI Generator 7.24.0.
+ * specification version 1.36.0 with OpenAPI Generator 7.24.0.
  *
  * SPDX-License-Identifier: Apache-2.0
  * Do not edit this generated file manually.
@@ -16,6 +16,13 @@ import {
     ConfigurationVerificationMappingToJSON,
     ConfigurationVerificationMappingToJSONTyped,
 } from './ConfigurationVerificationMapping.js';
+import type { ConfigurationVerificationScenarioBinding } from './ConfigurationVerificationScenarioBinding.js';
+import {
+    ConfigurationVerificationScenarioBindingFromJSON,
+    ConfigurationVerificationScenarioBindingFromJSONTyped,
+    ConfigurationVerificationScenarioBindingToJSON,
+    ConfigurationVerificationScenarioBindingToJSONTyped,
+} from './ConfigurationVerificationScenarioBinding.js';
 
 /**
  * Server-derived identity of the reviewed configuration and evaluator, not tenant-runtime execution evidence.
@@ -54,11 +61,23 @@ export interface ConfigurationVerificationIdentity {
      */
     mappings: Array<ConfigurationVerificationMapping>;
     /**
+     * Desired bindings with saved offline conversation tests. These tests use actual mapping-case documents and the scenario interpreter, without live delivery or acknowledgement evidence.
+     * @type {Array<ConfigurationVerificationScenarioBinding>}
+     * @memberof ConfigurationVerificationIdentity
+     */
+    scenarioBindings: Array<ConfigurationVerificationScenarioBinding>;
+    /**
      * Desired mappings without saved cases. A passing suite does not cover these mappings.
      * @type {number}
      * @memberof ConfigurationVerificationIdentity
      */
     untestedMappingCount: number;
+    /**
+     * Desired scenario bindings without saved conversation tests. Null for historical runs that did not measure conversation coverage.
+     * @type {number}
+     * @memberof ConfigurationVerificationIdentity
+     */
+    untestedScenarioBindingCount: number | null;
     /**
      * Total selected saved cases, including cases not reached before cancellation or timeout.
      * @type {number}
@@ -76,7 +95,9 @@ export function instanceOfConfigurationVerificationIdentity(value: object): valu
     if (!('baseSnapshotEtag' in value) || value['baseSnapshotEtag'] === undefined) return false;
     if (!('evaluatorSha256' in value) || value['evaluatorSha256'] === undefined) return false;
     if (!('mappings' in value) || value['mappings'] === undefined) return false;
+    if (!('scenarioBindings' in value) || value['scenarioBindings'] === undefined) return false;
     if (!('untestedMappingCount' in value) || value['untestedMappingCount'] === undefined) return false;
+    if (!('untestedScenarioBindingCount' in value) || value['untestedScenarioBindingCount'] === undefined) return false;
     if (!('caseCount' in value) || value['caseCount'] === undefined) return false;
     return true;
 }
@@ -96,7 +117,9 @@ export function ConfigurationVerificationIdentityFromJSONTyped(json: any, ignore
         'baseSnapshotEtag': json['baseSnapshotEtag'],
         'evaluatorSha256': json['evaluatorSha256'],
         'mappings': ((json['mappings'] as Array<any>).map(ConfigurationVerificationMappingFromJSON)),
+        'scenarioBindings': ((json['scenarioBindings'] as Array<any>).map(ConfigurationVerificationScenarioBindingFromJSON)),
         'untestedMappingCount': json['untestedMappingCount'],
+        'untestedScenarioBindingCount': json['untestedScenarioBindingCount'],
         'caseCount': json['caseCount'],
     };
 }
@@ -117,7 +140,9 @@ export function ConfigurationVerificationIdentityToJSONTyped(value?: Configurati
         'baseSnapshotEtag': value['baseSnapshotEtag'],
         'evaluatorSha256': value['evaluatorSha256'],
         'mappings': ((value['mappings'] as Array<any>).map(ConfigurationVerificationMappingToJSON)),
+        'scenarioBindings': ((value['scenarioBindings'] as Array<any>).map(ConfigurationVerificationScenarioBindingToJSON)),
         'untestedMappingCount': value['untestedMappingCount'],
+        'untestedScenarioBindingCount': value['untestedScenarioBindingCount'],
         'caseCount': value['caseCount'],
     };
 }

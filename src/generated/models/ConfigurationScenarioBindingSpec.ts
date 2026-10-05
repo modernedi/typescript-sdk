@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * ModernEDI TypeScript SDK, generated from the ModernEDI Integration API
- * specification version 1.35.0 with OpenAPI Generator 7.24.0.
+ * specification version 1.36.0 with OpenAPI Generator 7.24.0.
  *
  * SPDX-License-Identifier: Apache-2.0
  * Do not edit this generated file manually.
@@ -30,6 +30,13 @@ import {
     ConfigurationScenarioBindingStepBindingToJSON,
     ConfigurationScenarioBindingStepBindingToJSONTyped,
 } from './ConfigurationScenarioBindingStepBinding.js';
+import type { ConfigurationScenarioBindingRegressionCase } from './ConfigurationScenarioBindingRegressionCase.js';
+import {
+    ConfigurationScenarioBindingRegressionCaseFromJSON,
+    ConfigurationScenarioBindingRegressionCaseFromJSONTyped,
+    ConfigurationScenarioBindingRegressionCaseToJSON,
+    ConfigurationScenarioBindingRegressionCaseToJSONTyped,
+} from './ConfigurationScenarioBindingRegressionCase.js';
 
 /**
  * References one exact published definition and binds all of its actors and steps. Apply resolves and freezes authoritative artifacts for runtime use.
@@ -37,6 +44,12 @@ import {
  * @interface ConfigurationScenarioBindingSpec
  */
 export interface ConfigurationScenarioBindingSpec {
+    /**
+     * Optional offline tests for this binding. Each observation references a saved case on the step's bound runtime mapping. Tests execute proposed maps and the existing graph interpreter without sending EDI or creating live run evidence. Case order is canonicalized by ID; observation order is preserved. Up to 10 cases, 20 observations each, and 64 KiB total.
+     * @type {Array<ConfigurationScenarioBindingRegressionCase>}
+     * @memberof ConfigurationScenarioBindingSpec
+     */
+    regressionCases?: Array<ConfigurationScenarioBindingRegressionCase>;
     /**
      *
      * @type {ConfigurationScenarioBindingDefinitionReference}
@@ -96,6 +109,7 @@ export function ConfigurationScenarioBindingSpecFromJSONTyped(json: any, ignoreD
     }
     return {
 
+        'regressionCases': json['regressionCases'] == null ? undefined : ((json['regressionCases'] as Array<any>).map(ConfigurationScenarioBindingRegressionCaseFromJSON)),
         'definition': ConfigurationScenarioBindingDefinitionReferenceFromJSON(json['definition']),
         'environment': json['environment'],
         'actors': ((json['actors'] as Array<any>).map(ConfigurationScenarioBindingActorBindingFromJSON)),
@@ -114,6 +128,7 @@ export function ConfigurationScenarioBindingSpecToJSONTyped(value?: Configuratio
 
     return {
 
+        'regressionCases': value['regressionCases'] == null ? undefined : ((value['regressionCases'] as Array<any>).map(ConfigurationScenarioBindingRegressionCaseToJSON)),
         'definition': ConfigurationScenarioBindingDefinitionReferenceToJSON(value['definition']),
         'environment': value['environment'],
         'actors': ((value['actors'] as Array<any>).map(ConfigurationScenarioBindingActorBindingToJSON)),
