@@ -6,7 +6,7 @@
  */
 export const MODERNEDI_API_VERSION = "1.36.0";
 export const OPENAPI_GENERATOR_VERSION = "7.24.0";
-export const OPENAPI_SPECIFICATION_SHA256 = "47ca6897dbe23c36d3f2eb9f6c4d3e0ee3d16f67c06c6948db32e5136e1eb151";
+export const OPENAPI_SPECIFICATION_SHA256 = "4a5141b5107976529144cea4f91c1b155a31ef217a5c0630f38026bcdfe90f3e";
 export const GENERATED_OPERATION_IDS = [
   "listScenarioRuns",
   "startScenarioRun",

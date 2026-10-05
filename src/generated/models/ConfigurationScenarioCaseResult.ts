@@ -78,7 +78,7 @@ export interface ConfigurationScenarioCaseResult {
      */
     actualChecksSha256: string | null;
     /**
-     * Safe diagnostic category, or null when the saved test passed.
+     * Safe diagnostic category, or null when the saved test passed. Fact timeouts and busy/limit errors leave the conversation unevaluated and never satisfy negative expectations. Retry verification; repeated failures may require simplifying the fact expression or contacting support. Raw documents, fact values, and Mapper errors are not included.
      * @type {ConfigurationScenarioCaseResultDiagnosticCodeEnum}
      * @memberof ConfigurationScenarioCaseResult
      */
@@ -149,6 +149,8 @@ export const ConfigurationScenarioCaseResultDiagnosticCodeEnum = {
     ExpectedResultMismatch: 'EXPECTED_RESULT_MISMATCH',
     MappingCaseFailed: 'MAPPING_CASE_FAILED',
     DocumentEvaluationFailed: 'DOCUMENT_EVALUATION_FAILED',
+    FactEvaluationTimeout: 'FACT_EVALUATION_TIMEOUT',
+    FactEvaluationBusyOrLimit: 'FACT_EVALUATION_BUSY_OR_LIMIT',
     UnknownDefaultOpenApi: '11184809'
 } as const;
 export type ConfigurationScenarioCaseResultDiagnosticCodeEnum = typeof ConfigurationScenarioCaseResultDiagnosticCodeEnum[keyof typeof ConfigurationScenarioCaseResultDiagnosticCodeEnum];
